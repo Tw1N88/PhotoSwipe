@@ -1,51 +1,42 @@
 /*!
   * PhotoSwipe 5.3.4 - https://photoswipe.com
-  * (c) 2022 Dmytro Semenov
+  * (c) 2023 Dmytro Semenov
   */
 /** @typedef {import('../photoswipe.js').Point} Point */
 
-/** @typedef {undefined | null | false | '' | 0} Falsy */
-/** @typedef {keyof HTMLElementTagNameMap} HTMLElementTagName */
-
 /**
- * @template {HTMLElementTagName | Falsy} [T="div"]
- * @template {Node | undefined} [NodeToAppendElementTo=undefined]
- * @param {string=} className
- * @param {T=} [tagName]
- * @param {NodeToAppendElementTo=} appendToEl
- * @returns {T extends HTMLElementTagName ? HTMLElementTagNameMap[T] : HTMLElementTagNameMap['div']}
+ * @template {keyof HTMLElementTagNameMap} T
+ * @param {string} className
+ * @param {T} tagName
+ * @param {Node} [appendToEl]
+ * @returns {HTMLElementTagNameMap[T]}
  */
 function createElement(className, tagName, appendToEl) {
-  const el = document.createElement(tagName || 'div');
+  const el = document.createElement(tagName);
   if (className) {
     el.className = className;
   }
   if (appendToEl) {
     appendToEl.appendChild(el);
   }
-  // @ts-expect-error
   return el;
 }
 
 /**
  * @param {Point} p1
  * @param {Point} p2
+ * @returns {Point}
  */
 function equalizePoints(p1, p2) {
-  p1.x = p2.x;
-  p1.y = p2.y;
-  if (p2.id !== undefined) {
-    p1.id = p2.id;
-  }
-  return p1;
+  return { ...p1, ...p2 };
 }
 
 /**
  * @param {Point} p
+ * @returns {Point}
  */
 function roundPoint(p) {
-  p.x = Math.round(p.x);
-  p.y = Math.round(p.y);
+  return { x: Math.round(p.x), y: Math.round(p.y) };
 }
 
 /**
@@ -53,6 +44,7 @@ function roundPoint(p) {
  *
  * @param {Point} p1
  * @param {Point} p2
+ * @returns {number}
  */
 function getDistanceBetween(p1, p2) {
   const x = Math.abs(p1.x - p2.x);
@@ -61,10 +53,11 @@ function getDistanceBetween(p1, p2) {
 }
 
 /**
- * Whether X and Y positions of points are qual
+ * Whether X and Y positions of points are equal
  *
  * @param {Point} p1
  * @param {Point} p2
+ * @returns {boolean}
  */
 function pointsEqual(p1, p2) {
   return p1.x === p2.x && p1.y === p2.y;
@@ -76,6 +69,7 @@ function pointsEqual(p1, p2) {
  * @param {number} val
  * @param {number} min
  * @param {number} max
+ * @returns {number}
  */
 function clamp(val, min, max) {
   return Math.min(Math.max(val, min), max);
@@ -85,18 +79,15 @@ function clamp(val, min, max) {
  * Get transform string
  *
  * @param {number} x
- * @param {number=} y
- * @param {number=} scale
+ * @param {number} [y]
+ * @param {number} [scale]
+ * @returns {string}
  */
 function toTransformString(x, y, scale) {
-  let propValue = 'translate3d('
-    + x + 'px,' + (y || 0) + 'px'
-    + ',0)';
+  let propValue = `translate3d(${x}px,${y || 0}px,0)`;
 
   if (scale !== undefined) {
-    propValue += ' scale3d('
-      + scale + ',' + scale
-      + ',1)';
+    propValue += ` scale3d(${scale},${scale},1)`;
   }
 
   return propValue;
@@ -107,8 +98,8 @@ function toTransformString(x, y, scale) {
  *
  * @param {HTMLElement} el
  * @param {number} x
- * @param {number=} y
- * @param {number=} scale
+ * @param {number} [y]
+ * @param {number} [scale]
  */
 function setTransform(el, x, y, scale) {
   el.style.transform = toTransformString(x, y, scale);
@@ -120,16 +111,16 @@ const defaultCSSEasing = 'cubic-bezier(.4,0,.22,1)';
  * Apply CSS transition to element
  *
  * @param {HTMLElement} el
- * @param {string=} prop CSS property to animate
- * @param {number=} duration in ms
- * @param {string=} ease CSS easing function
+ * @param {string} [prop] CSS property to animate
+ * @param {number} [duration] in ms
+ * @param {string} [ease] CSS easing function
  */
 function setTransitionStyle(el, prop, duration, ease) {
   // inOut: 'cubic-bezier(.4, 0, .22, 1)', // for "toggle state" transitions
   // out: 'cubic-bezier(0, 0, .22, 1)', // for "show" transitions
   // in: 'cubic-bezier(.4, 0, 1, 1)'// for "hide" transitions
   el.style.transition = prop
-    ? (prop + ' ' + duration + 'ms ' + (ease || defaultCSSEasing))
+    ? `${prop} ${duration}ms ${ease || defaultCSSEasing}`
     : 'none';
 }
 
@@ -141,8 +132,8 @@ function setTransitionStyle(el, prop, duration, ease) {
  * @param {string | number} h
  */
 function setWidthHeight(el, w, h) {
-  el.style.width = (typeof w === 'number') ? (w + 'px') : w;
-  el.style.height = (typeof h === 'number') ? (h + 'px') : h;
+  el.style.width = (typeof w === 'number') ? `${w}px` : w;
+  el.style.height = (typeof h === 'number') ? `${h}px` : h;
 }
 
 /**
@@ -186,18 +177,17 @@ const LOAD_STATE = {
  * with a special key or via mouse wheel.
  *
  * @param {MouseEvent | KeyboardEvent} e
+ * @returns {boolean}
  */
 function specialKeyUsed(e) {
-  if (e.which === 2 || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) {
-    return true;
-  }
+  return ('button' in e && e.button === 1) || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey;
 }
 
 /**
  * Parse `gallery` or `children` options.
  *
- * @param {import('../photoswipe.js').ElementProvider} option
- * @param {string=} legacySelector
+ * @param {import('../photoswipe.js').ElementProvider} [option]
+ * @param {string} [legacySelector]
  * @param {HTMLElement | Document} [parent]
  * @returns HTMLElement[]
  */
@@ -232,6 +222,7 @@ function isSafari() {
 let supportsPassive = false;
 /* eslint-disable */
 try {
+  /* @ts-ignore */
   window.addEventListener('test', null, Object.defineProperty({}, 'passive', {
     get: () => {
       supportsPassive = true;
@@ -240,13 +231,12 @@ try {
 } catch (e) {}
 /* eslint-enable */
 
-
 /**
  * @typedef {Object} PoolItem
- * @prop {HTMLElement | Window | Document} target
+ * @prop {HTMLElement | Window | Document | undefined | null} target
  * @prop {string} type
- * @prop {(e: any) => void} listener
- * @prop {boolean} passive
+ * @prop {EventListenerOrEventListenerObject} listener
+ * @prop {boolean} [passive]
  */
 
 class DOMEvents {
@@ -261,10 +251,10 @@ class DOMEvents {
   /**
    * Adds event listeners
    *
-   * @param {HTMLElement | Window | Document} target
-   * @param {string} type Can be multiple, separated by space.
-   * @param {(e: any) => void} listener
-   * @param {boolean=} passive
+   * @param {PoolItem['target']} target
+   * @param {PoolItem['type']} type Can be multiple, separated by space.
+   * @param {PoolItem['listener']} listener
+   * @param {PoolItem['passive']} [passive]
    */
   add(target, type, listener, passive) {
     this._toggleListener(target, type, listener, passive);
@@ -273,10 +263,10 @@ class DOMEvents {
   /**
    * Removes event listeners
    *
-   * @param {HTMLElement | Window | Document} target
-   * @param {string} type
-   * @param {(e: any) => void} listener
-   * @param {boolean=} passive
+   * @param {PoolItem['target']} target
+   * @param {PoolItem['type']} type
+   * @param {PoolItem['listener']} listener
+   * @param {PoolItem['passive']} [passive]
    */
   remove(target, type, listener, passive) {
     this._toggleListener(target, type, listener, passive, true);
@@ -302,12 +292,13 @@ class DOMEvents {
   /**
    * Adds or removes event
    *
-   * @param {HTMLElement | Window | Document} target
-   * @param {string} type
-   * @param {(e: any) => void} listener
-   * @param {boolean} passive
-   * @param {boolean=} unbind Whether the event should be added or removed
-   * @param {boolean=} skipPool Whether events pool should be skipped
+   * @private
+   * @param {PoolItem['target']} target
+   * @param {PoolItem['type']} type
+   * @param {PoolItem['listener']} listener
+   * @param {PoolItem['passive']} [passive]
+   * @param {boolean} [unbind] Whether the event should be added or removed
+   * @param {boolean} [skipPool] Whether events pool should be skipped
    */
   _toggleListener(target, type, listener, passive, unbind, skipPool) {
     if (!target) {
@@ -339,7 +330,6 @@ class DOMEvents {
           }
         }
 
-
         // most PhotoSwipe events call preventDefault,
         // and we do not need browser to scroll the page
         const eventOptions = supportsPassive ? { passive: (passive || false) } : false;
@@ -356,11 +346,13 @@ class DOMEvents {
 
 /** @typedef {import('../photoswipe.js').PhotoSwipeOptions} PhotoSwipeOptions */
 /** @typedef {import('../photoswipe.js').default} PhotoSwipe */
+/** @typedef {import('../photoswipe.js').Point} Point */
 /** @typedef {import('../slide/slide.js').SlideData} SlideData */
 
 /**
  * @param {PhotoSwipeOptions} options
  * @param {PhotoSwipe} pswp
+ * @returns {Point}
  */
 function getViewportSize(options, pswp) {
   if (options.getViewportSizeFn) {
@@ -411,14 +403,13 @@ function getViewportSize(options, pswp) {
  *
  * @param {'left' | 'top' | 'bottom' | 'right'} prop
  * @param {PhotoSwipeOptions} options PhotoSwipe options
- * @param {{ x?: number; y?: number }} viewportSize PhotoSwipe viewport size, for example: { x:800, y:600 }
+ * @param {Point} viewportSize PhotoSwipe viewport size, for example: { x:800, y:600 }
  * @param {SlideData} itemData Data about the slide
  * @param {number} index Slide index
  * @returns {number}
  */
 function parsePaddingOption(prop, options, viewportSize, itemData, index) {
-  /** @type {number} */
-  let paddingValue;
+  let paddingValue = 0;
 
   if (options.paddingFn) {
     paddingValue = options.paddingFn(viewportSize, itemData, index)[prop];
@@ -433,14 +424,15 @@ function parsePaddingOption(prop, options, viewportSize, itemData, index) {
     }
   }
 
-  return paddingValue || 0;
+  return Number(paddingValue) || 0;
 }
 
 /**
  * @param {PhotoSwipeOptions} options
- * @param {{ x?: number; y?: number }} viewportSize
+ * @param {Point} viewportSize
  * @param {SlideData} itemData
  * @param {number} index
+ * @returns {Point}
  */
 function getPanAreaSize(options, viewportSize, itemData, index) {
   return {
@@ -454,8 +446,11 @@ function getPanAreaSize(options, viewportSize, itemData, index) {
 }
 
 /** @typedef {import('./slide.js').default} Slide */
-/** @typedef {{ x?: number; y?: number }} Point */
+/** @typedef {Record<Axis, number>} Point */
 /** @typedef {'x' | 'y'} Axis */
+
+/** @type {Point} */
+const defaultPoint = { x: 0, y: 0 };
 
 /**
  * Calculates minimum, maximum and initial (center) bounds of a slide
@@ -466,17 +461,10 @@ class PanBounds {
    */
   constructor(slide) {
     this.slide = slide;
-
     this.currZoomLevel = 1;
-
-    /** @type {Point} */
-    this.center = {};
-    /** @type {Point} */
-    this.max = {};
-    /** @type {Point} */
-    this.min = {};
-
-    this.reset();
+    this.center = /** @type {Point} */ ({ ...defaultPoint });
+    this.max = /** @type {Point} */ ({ ...defaultPoint });
+    this.min = /** @type {Point} */ ({ ...defaultPoint });
   }
 
   /**
@@ -516,7 +504,7 @@ class PanBounds {
     const panAreaSize = this.slide.panAreaSize[axis];
 
     // Default position of element.
-    // By defaul it is center of viewport:
+    // By default, it is center of viewport:
     this.center[axis] = Math.round((panAreaSize - elSize) / 2) + padding;
 
     // maximum pan position
@@ -532,12 +520,9 @@ class PanBounds {
 
   // _getZeroBounds
   reset() {
-    this.center.x = 0;
-    this.center.y = 0;
-    this.max.x = 0;
-    this.max.y = 0;
-    this.min.x = 0;
-    this.min.y = 0;
+    this.center = { ...defaultPoint };
+    this.max = { ...defaultPoint };
+    this.min = { ...defaultPoint };
   }
 
   /**
@@ -545,6 +530,7 @@ class PanBounds {
    *
    * @param {Axis} axis x or y
    * @param {number} panOffset
+   * @returns {number}
    */
   correctPan(axis, panOffset) { // checkPanBounds
     return clamp(panOffset, this.max[axis], this.min[axis]);
@@ -555,6 +541,7 @@ const MAX_IMAGE_WIDTH = 4000;
 
 /** @typedef {import('../photoswipe.js').default} PhotoSwipe */
 /** @typedef {import('../photoswipe.js').PhotoSwipeOptions} PhotoSwipeOptions */
+/** @typedef {import('../photoswipe.js').Point} Point */
 /** @typedef {import('../slide/slide.js').SlideData} SlideData */
 
 /** @typedef {'fit' | 'fill' | number | ((zoomLevelObject: ZoomLevel) => number)} ZoomLevelOption */
@@ -568,13 +555,24 @@ class ZoomLevel {
    * @param {PhotoSwipeOptions} options PhotoSwipe options
    * @param {SlideData} itemData Slide data
    * @param {number} index Slide index
-   * @param {PhotoSwipe=} pswp PhotoSwipe instance, can be undefined if not initialized yet
+   * @param {PhotoSwipe} [pswp] PhotoSwipe instance, can be undefined if not initialized yet
    */
   constructor(options, itemData, index, pswp) {
     this.pswp = pswp;
     this.options = options;
     this.itemData = itemData;
     this.index = index;
+    /** @type { Point | null } */
+    this.panAreaSize = null;
+    /** @type { Point | null } */
+    this.elementSize = null;
+    this.fit = 1;
+    this.fill = 1;
+    this.vFill = 1;
+    this.initial = 1;
+    this.secondary = 1;
+    this.max = 1;
+    this.min = 1;
   }
 
   /**
@@ -584,18 +582,16 @@ class ZoomLevel {
    *
    * @param {number} maxWidth
    * @param {number} maxHeight
-   * @param {{ x?: number; y?: number }} panAreaSize
+   * @param {Point} panAreaSize
    */
   update(maxWidth, maxHeight, panAreaSize) {
-    this.elementSize = {
-      x: maxWidth,
-      y: maxHeight
-    };
-
+    /** @type {Point} */
+    const elementSize = { x: maxWidth, y: maxHeight };
+    this.elementSize = elementSize;
     this.panAreaSize = panAreaSize;
 
-    const hRatio = this.panAreaSize.x / this.elementSize.x;
-    const vRatio = this.panAreaSize.y / this.elementSize.y;
+    const hRatio = panAreaSize.x / elementSize.x;
+    const vRatio = panAreaSize.y / elementSize.y;
 
     this.fit = Math.min(1, hRatio < vRatio ? hRatio : vRatio);
     this.fill = Math.min(1, hRatio > vRatio ? hRatio : vRatio);
@@ -628,10 +624,12 @@ class ZoomLevel {
    *
    * @private
    * @param {'initial' | 'secondary' | 'max'} optionPrefix Zoom level option prefix (initial, secondary, max)
+   * @returns { number | undefined }
    */
   _parseZoomLevelOption(optionPrefix) {
-    // eslint-disable-next-line max-len
-    const optionName = /** @type {'initialZoomLevel' | 'secondaryZoomLevel' | 'maxZoomLevel'} */ (optionPrefix + 'ZoomLevel');
+    const optionName = /** @type {'initialZoomLevel' | 'secondaryZoomLevel' | 'maxZoomLevel'} */ (
+      optionPrefix + 'ZoomLevel'
+    );
     const optionValue = this.options[optionName];
 
     if (!optionValue) {
@@ -672,7 +670,7 @@ class ZoomLevel {
     // 3x of "fit" state, but not larger than original
     currZoomLevel = Math.min(1, this.fit * 3);
 
-    if (currZoomLevel * this.elementSize.x > MAX_IMAGE_WIDTH) {
+    if (this.elementSize && currZoomLevel * this.elementSize.x > MAX_IMAGE_WIDTH) {
       currZoomLevel = MAX_IMAGE_WIDTH / this.elementSize.x;
     }
 
@@ -698,15 +696,9 @@ class ZoomLevel {
    * @return {number}
    */
   _getMax() {
-    const currZoomLevel = this._parseZoomLevelOption('max');
-
-    if (currZoomLevel) {
-      return currZoomLevel;
-    }
-
     // max zoom level is x4 from "fit state",
     // used for zoom gesture and ctrl/trackpad zoom
-    return Math.max(1, this.fit * 4);
+    return this._parseZoomLevelOption('max') || Math.max(1, this.fit * 4);
   }
 }
 
@@ -728,7 +720,9 @@ class Slide {
     this.isActive = (index === pswp.currIndex);
     this.currentResolution = 0;
     /** @type {Point} */
-    this.panAreaSize = {};
+    this.panAreaSize = { x: 0, y: 0 };
+    /** @type {Point} */
+    this.pan = { x: 0, y: 0 };
 
     this.isFirstSlide = (this.isActive && !pswp.opener.isOpen);
 
@@ -740,20 +734,17 @@ class Slide {
       index
     });
 
-    this.pan = {
-      x: 0,
-      y: 0
-    };
-
     this.content = this.pswp.contentLoader.getContentBySlide(this);
-    this.container = createElement('pswp__zoom-wrap');
+    this.container = createElement('pswp__zoom-wrap', 'div');
+    /** @type {HTMLElement | null} */
+    this.holderElement = null;
 
     this.currZoomLevel = 1;
     /** @type {number} */
     this.width = this.content.width;
     /** @type {number} */
     this.height = this.content.height;
-
+    this.heavyAppended = false;
     this.bounds = new PanBounds(this);
 
     this.prevDisplayedWidth = -1;
@@ -798,7 +789,7 @@ class Slide {
     this.updateContentSize();
     this.appendHeavy();
 
-    this.holderElement.appendChild(this.container);
+    holderElement.appendChild(this.container);
 
     this.zoomAndPanToInitial();
 
@@ -814,7 +805,7 @@ class Slide {
   }
 
   load() {
-    this.content.load();
+    this.content.load(false);
     this.pswp.dispatch('slideLoad', { slide: this });
   }
 
@@ -918,7 +909,7 @@ class Slide {
    * Apply size to current slide content,
    * based on the current resolution and scale.
    *
-   * @param {boolean=} force if size should be updated even if dimensions weren't changed
+   * @param {boolean} [force] if size should be updated even if dimensions weren't changed
    */
   updateContentSize(force) {
     // Use initial zoom level
@@ -953,21 +944,19 @@ class Slide {
     return false;
   }
 
+  /** @returns {HTMLImageElement | HTMLDivElement | null | undefined} */
   getPlaceholderElement() {
-    if (this.content.placeholder) {
-      return this.content.placeholder.element;
-    }
+    return this.content.placeholder?.element;
   }
 
   /**
    * Zoom current slide image to...
    *
    * @param {number} destZoomLevel Destination zoom level.
-   * @param {{ x?: number; y?: number }} centerPoint
+   * @param {Point} [centerPoint]
    * Transform origin center point, or false if viewport center should be used.
    * @param {number | false} [transitionDuration] Transition duration, may be set to 0.
-   * @param {boolean=} ignoreBounds Minimum and maximum zoom levels will be ignored.
-   * @return {boolean=} Returns true if animated.
+   * @param {boolean} [ignoreBounds] Minimum and maximum zoom levels will be ignored.
    */
   zoomTo(destZoomLevel, centerPoint, transitionDuration, ignoreBounds) {
     const { pswp } = this;
@@ -1000,10 +989,10 @@ class Slide {
     this.setZoomLevel(destZoomLevel);
     this.pan.x = this.calculateZoomToPanOffset('x', centerPoint, prevZoomLevel);
     this.pan.y = this.calculateZoomToPanOffset('y', centerPoint, prevZoomLevel);
-    roundPoint(this.pan);
+    this.pan = roundPoint(this.pan);
 
     const finishTransition = () => {
-      this._setResolution(destZoomLevel);
+      this.setResolution(destZoomLevel);
       this.applyCurrentZoomPan();
     };
 
@@ -1023,7 +1012,7 @@ class Slide {
   }
 
   /**
-   * @param {{ x?: number, y?: number }} [centerPoint]
+   * @param {Point} [centerPoint]
    */
   toggleZoom(centerPoint) {
     this.zoomTo(
@@ -1052,10 +1041,11 @@ class Slide {
    * pan bounds according to the new zoom level.
    *
    * @param {'x' | 'y'} axis
-   * @param {{ x?: number; y?: number }} [point]
+   * @param {Point} [point]
    * point based on which zoom is performed, usually refers to the current mouse position,
    * if false - viewport center will be used.
-   * @param {number=} prevZoomLevel Zoom level before new zoom was applied.
+   * @param {number} [prevZoomLevel] Zoom level before new zoom was applied.
+   * @returns {number}
    */
   calculateZoomToPanOffset(axis, point, prevZoomLevel) {
     const totalPanDistance = this.bounds.max[axis] - this.bounds.min[axis];
@@ -1065,6 +1055,10 @@ class Slide {
 
     if (!point) {
       point = this.pswp.getViewportCenterPoint();
+    }
+
+    if (!prevZoomLevel) {
+      prevZoomLevel = this.zoomLevels.initial;
     }
 
     const zoomFactor = this.currZoomLevel / prevZoomLevel;
@@ -1088,16 +1082,18 @@ class Slide {
 
   /**
    * If the slide in the current state can be panned by the user
+   * @returns {boolean}
    */
   isPannable() {
-    return this.width && (this.currZoomLevel > this.zoomLevels.fit);
+    return Boolean(this.width) && (this.currZoomLevel > this.zoomLevels.fit);
   }
 
   /**
    * If the slide can be zoomed
+   * @returns {boolean}
    */
   isZoomable() {
-    return this.width && this.content.isZoomable();
+    return Boolean(this.width) && this.content.isZoomable();
   }
 
   /**
@@ -1116,7 +1112,7 @@ class Slide {
 
     // pan according to the zoom level
     this.bounds.update(this.currZoomLevel);
-    equalizePoints(this.pan, this.bounds.center);
+    this.pan = equalizePoints(this.pan, this.bounds.center);
     this.pswp.dispatch('initialZoomPan', { slide: this });
   }
 
@@ -1126,6 +1122,7 @@ class Slide {
    * @param {number} x
    * @param {number} y
    * @param {number} zoom
+   * @private
    */
   _applyZoomTransform(x, y, zoom) {
     zoom /= this.currentResolution || this.zoomLevels.initial;
@@ -1135,7 +1132,7 @@ class Slide {
   calculateSize() {
     const { pswp } = this;
 
-    equalizePoints(
+    this.panAreaSize = equalizePoints(
       this.panAreaSize,
       getPanAreaSize(pswp.options, pswp.viewportSize, this.data, this.index)
     );
@@ -1147,6 +1144,7 @@ class Slide {
     });
   }
 
+  /** @returns {string} */
   getCurrentTransform() {
     const scale = this.currZoomLevel / (this.currentResolution || this.zoomLevels.initial);
     return toTransformString(this.pan.x, this.pan.y, scale);
@@ -1162,12 +1160,12 @@ class Slide {
    * the same as image with zoom level 1 and resolution 1.
    *
    * Used to optimize animations and make
-   * sure that browser renders image in highest quality.
+   * sure that browser renders image in the highest quality.
    * Also used by responsive images to load the correct one.
    *
    * @param {number} newResolution
    */
-  _setResolution(newResolution) {
+  setResolution(newResolution) {
     if (newResolution === this.currentResolution) {
       return;
     }
@@ -1195,6 +1193,7 @@ const MIN_NEXT_SLIDE_SPEED = 0.5;
 /**
  * @param {number} initialVelocity
  * @param {number} decelerationRate
+ * @returns {number}
  */
 function project(initialVelocity, decelerationRate) {
   return initialVelocity * decelerationRate / (1 - decelerationRate);
@@ -1209,14 +1208,15 @@ class DragHandler {
    */
   constructor(gestures) {
     this.gestures = gestures;
-    this.pswp = gestures.pswp;
     /** @type {Point} */
-    this.startPan = {};
+    this.startPan = { x: 0, y: 0 };
   }
 
   start() {
-    equalizePoints(this.startPan, this.pswp.currSlide.pan);
-    this.pswp.animations.stopAll();
+    if (this.gestures.pswp.currSlide) {
+      this.startPan = equalizePoints(this.startPan, this.gestures.pswp.currSlide.pan);
+    }
+    this.gestures.pswp.animations.stopAll();
   }
 
   change() {
@@ -1225,7 +1225,7 @@ class DragHandler {
 
     if (dragAxis === 'y'
         && pswp.options.closeOnVerticalDrag
-        && currSlide.currZoomLevel <= currSlide.zoomLevels.fit
+        && (currSlide && currSlide.currZoomLevel <= currSlide.zoomLevels.fit)
         && !this.gestures.isMultitouch) {
       // Handle vertical drag to close
       const panY = currSlide.pan.y + (p1.y - prevP1.y);
@@ -1240,15 +1240,17 @@ class DragHandler {
       if (!mainScrollChanged) {
         this._panOrMoveMainScroll('y');
 
-        roundPoint(currSlide.pan);
-        currSlide.applyCurrentZoomPan();
+        if (currSlide) {
+          currSlide.pan = roundPoint(currSlide.pan);
+          currSlide.applyCurrentZoomPan();
+        }
       }
     }
   }
 
   end() {
     const { pswp, velocity } = this.gestures;
-    const { mainScroll } = pswp;
+    const { mainScroll, currSlide } = pswp;
     let indexDiff = 0;
 
     pswp.animations.stopAll();
@@ -1266,7 +1268,7 @@ class DragHandler {
 
       // Go next slide.
       //
-      // - if velocity and its direction is matched
+      // - if velocity and its direction is matched,
       //   and we see at least tiny part of the next slide
       //
       // - or if we see less than 50% of the current slide
@@ -1288,7 +1290,7 @@ class DragHandler {
     }
 
     // Restore zoom level
-    if (pswp.currSlide.currZoomLevel > pswp.currSlide.zoomLevels.max
+    if ((currSlide && currSlide.currZoomLevel > currSlide.zoomLevels.max)
         || this.gestures.isMultitouch) {
       this.gestures.zoomLevels.correctZoomPan(true);
     } else {
@@ -1306,15 +1308,19 @@ class DragHandler {
    * @param {'x' | 'y'} axis
    */
   _finishPanGestureForAxis(axis) {
-    const { pswp } = this;
+    const { pswp, velocity } = this.gestures;
     const { currSlide } = pswp;
-    const { velocity } = this.gestures;
+
+    if (!currSlide) {
+      return;
+    }
+
     const { pan, bounds } = currSlide;
     const panPos = pan[axis];
     const restoreBgOpacity = (pswp.bgOpacity < 1 && axis === 'y');
 
     // 0.995 means - scroll view loses 0.5% of its velocity per millisecond
-    // Inceasing this number will reduce travel distance
+    // Increasing this number will reduce travel distance
     const decelerationRate = 0.995; // 0.99
 
     // Pan position if there is no bounds
@@ -1385,6 +1391,7 @@ class DragHandler {
    *
    * @private
    * @param {'x' | 'y'} axis
+   * @returns {boolean}
    */
   _panOrMoveMainScroll(axis) {
     const { p1, pswp, dragAxis, prevP1, isMultitouch } = this.gestures;
@@ -1392,8 +1399,8 @@ class DragHandler {
     const delta = (p1[axis] - prevP1[axis]);
     const newMainScrollX = mainScroll.x + delta;
 
-    if (!delta) {
-      return;
+    if (!delta || !currSlide) {
+      return false;
     }
 
     // Always move main scroll if image can not be panned
@@ -1472,8 +1479,10 @@ class DragHandler {
         this._setPanWithFriction(axis, newPan);
       }
     }
+
+    return false;
   }
-  //
+
   // If we move above - the ratio is negative
   // If we move below the ratio is positive
 
@@ -1486,10 +1495,11 @@ class DragHandler {
    *
    * @private
    * @param {number} panY The current pan Y position.
+   * @returns {number}
    */
   _getVerticalDragRatio(panY) {
-    return (panY - this.pswp.currSlide.bounds.center.y)
-            / (this.pswp.viewportSize.y / 3);
+    return (panY - (this.gestures.pswp.currSlide?.bounds.center.y ?? 0))
+            / (this.gestures.pswp.viewportSize.y / 3);
   }
 
   /**
@@ -1500,10 +1510,16 @@ class DragHandler {
    * @private
    * @param {'x' | 'y'} axis
    * @param {number} potentialPan
-   * @param {number=} customFriction (0.1 - 1)
+   * @param {number} [customFriction] (0.1 - 1)
    */
   _setPanWithFriction(axis, potentialPan, customFriction) {
-    const { pan, bounds } = this.pswp.currSlide;
+    const { currSlide } = this.gestures.pswp;
+
+    if (!currSlide) {
+      return;
+    }
+
+    const { pan, bounds } = currSlide;
     const correctedPan = bounds.correctPan(axis, potentialPan);
     // If we are out of pan bounds
     if (correctedPan !== potentialPan || customFriction) {
@@ -1528,6 +1544,7 @@ const LOWER_ZOOM_FRICTION = 0.15;
  * @param {Point} p
  * @param {Point} p1
  * @param {Point} p2
+ * @returns {Point}
  */
 function getZoomPointsCenter(p, p1, p2) {
   p.x = (p1.x + p2.x) / 2;
@@ -1541,26 +1558,46 @@ class ZoomHandler {
    */
   constructor(gestures) {
     this.gestures = gestures;
-    this.pswp = this.gestures.pswp;
-    /** @type {Point} */
-    this._startPan = {};
-
-    /** @type {Point} */
-    this._startZoomPoint = {};
-    /** @type {Point} */
-    this._zoomPoint = {};
+    /**
+     * @private
+     * @type {Point}
+     */
+    this._startPan = { x: 0, y: 0 };
+    /**
+     * @private
+     * @type {Point}
+     */
+    this._startZoomPoint = { x: 0, y: 0 };
+    /**
+     * @private
+     * @type {Point}
+     */
+    this._zoomPoint = { x: 0, y: 0 };
+    /** @private */
+    this._wasOverFitZoomLevel = false;
+    /** @private */
+    this._startZoomLevel = 1;
   }
 
   start() {
-    this._startZoomLevel = this.pswp.currSlide.currZoomLevel;
-    equalizePoints(this._startPan, this.pswp.currSlide.pan);
-    this.pswp.animations.stopAllPan();
+    const { currSlide } = this.gestures.pswp;
+    if (currSlide) {
+      this._startZoomLevel = currSlide.currZoomLevel;
+      this._startPan = equalizePoints(this._startPan, currSlide.pan);
+    }
+
+    this.gestures.pswp.animations.stopAllPan();
     this._wasOverFitZoomLevel = false;
   }
 
   change() {
     const { p1, startP1, p2, startP2, pswp } = this.gestures;
     const { currSlide } = pswp;
+
+    if (!currSlide) {
+      return;
+    }
+
     const minZoomLevel = currSlide.zoomLevels.min;
     const maxZoomLevel = currSlide.zoomLevels.max;
 
@@ -1606,9 +1643,9 @@ class ZoomHandler {
   }
 
   end() {
-    const { pswp } = this;
+    const { pswp } = this.gestures;
     const { currSlide } = pswp;
-    if (currSlide.currZoomLevel < currSlide.zoomLevels.initial
+    if ((!currSlide || currSlide.currZoomLevel < currSlide.zoomLevels.initial)
         && !this._wasOverFitZoomLevel
         && pswp.options.pinchToClose) {
       pswp.close();
@@ -1621,6 +1658,7 @@ class ZoomHandler {
    * @private
    * @param {'x' | 'y'} axis
    * @param {number} currZoomLevel
+   * @returns {number}
    */
   _calculatePanForZoomLevel(axis, currZoomLevel) {
     const zoomFactor = currZoomLevel / this._startZoomLevel;
@@ -1633,18 +1671,18 @@ class ZoomHandler {
    * beyond minimum or maximum values.
    * With animation.
    *
-   * @param {boolean=} ignoreGesture
+   * @param {boolean} [ignoreGesture]
    * Wether gesture coordinates should be ignored when calculating destination pan position.
    */
   correctZoomPan(ignoreGesture) {
-    const { pswp } = this;
+    const { pswp } = this.gestures;
     const { currSlide } = pswp;
 
-    if (!currSlide.isZoomable()) {
+    if (!currSlide?.isZoomable()) {
       return;
     }
 
-    if (this._zoomPoint.x === undefined) {
+    if (this._zoomPoint.x === 0) {
       ignoreGesture = true;
     }
 
@@ -1668,8 +1706,8 @@ class ZoomHandler {
     const initialBgOpacity = pswp.bgOpacity;
     const restoreBgOpacity = pswp.bgOpacity < 1;
 
-    const initialPan = equalizePoints({}, currSlide.pan);
-    let destinationPan = equalizePoints({}, initialPan);
+    const initialPan = equalizePoints({ x: 0, y: 0 }, currSlide.pan);
+    let destinationPan = equalizePoints({ x: 0, y: 0 }, initialPan);
 
     if (ignoreGesture) {
       this._zoomPoint.x = 0;
@@ -1677,7 +1715,7 @@ class ZoomHandler {
       this._startZoomPoint.x = 0;
       this._startZoomPoint.y = 0;
       this._startZoomLevel = prevZoomLevel;
-      equalizePoints(this._startPan, initialPan);
+      this._startPan = equalizePoints(this._startPan, initialPan);
     }
 
     if (currZoomLevelNeedsChange) {
@@ -1698,14 +1736,11 @@ class ZoomHandler {
     // return zoom level and its bounds to initial
     currSlide.setZoomLevel(prevZoomLevel);
 
-    let panNeedsChange = true;
-    if (pointsEqual(destinationPan, initialPan)) {
-      panNeedsChange = false;
-    }
+    const panNeedsChange = !pointsEqual(destinationPan, initialPan);
 
     if (!panNeedsChange && !currZoomLevelNeedsChange && !restoreBgOpacity) {
       // update resolution after gesture
-      currSlide._setResolution(destinationZoomLevel);
+      currSlide.setResolution(destinationZoomLevel);
       currSlide.applyCurrentZoomPan();
 
       // nothing to animate
@@ -1751,7 +1786,7 @@ class ZoomHandler {
       },
       onComplete: () => {
         // update resolution after transition ends
-        currSlide._setResolution(destinationZoomLevel);
+        currSlide.setResolution(destinationZoomLevel);
         currSlide.applyCurrentZoomPan();
       }
     });
@@ -1759,21 +1794,21 @@ class ZoomHandler {
 }
 
 /**
- * @template T
- * @template P
+ * @template T, P
  * @typedef {import('../types.js').AddPostfix<T, P>} AddPostfix<T, P>
  */
 
 /** @typedef {import('./gestures.js').default} Gestures */
+/** @typedef {import('../photoswipe.js').Point} Point */
 
 /** @typedef {'imageClick' | 'bgClick' | 'tap' | 'doubleTap'} Actions */
-/** @typedef {{ x?: number; y?: number }} Point */
 
 /**
  * Whether the tap was performed on the main slide
  * (rather than controls or caption).
  *
  * @param {PointerEvent} event
+ * @returns {boolean}
  */
 function didTapOnMainContent(event) {
   return !!(/** @type {HTMLElement} */ (event.target).closest('.pswp__container'));
@@ -1828,6 +1863,7 @@ class TapHandler {
   }
 
   /**
+   * @private
    * @param {Actions} actionName
    * @param {Point} point
    * @param {PointerEvent} originalEvent
@@ -1853,12 +1889,12 @@ class TapHandler {
         pswp[optionValue]();
         break;
       case 'zoom':
-        currSlide.toggleZoom(point);
+        currSlide?.toggleZoom(point);
         break;
       case 'zoom-or-close':
         // by default click zooms current image,
         // if it can not be zoomed - gallery will be closed
-        if (currSlide.isZoomable()
+        if (currSlide?.isZoomable()
             && currSlide.zoomLevels.secondary !== currSlide.zoomLevels.initial) {
           currSlide.toggleZoom(point);
         } else if (pswp.options.clickToCloseNonZoomable) {
@@ -1866,7 +1902,7 @@ class TapHandler {
         }
         break;
       case 'toggle-controls':
-        this.gestures.pswp.element.classList.toggle('pswp--ui-visible');
+        this.gestures.pswp.element?.classList.toggle('pswp--ui-visible');
         // if (_controlsVisible) {
         //   _ui.hideControls();
         // } else {
@@ -1902,38 +1938,63 @@ class Gestures {
   constructor(pswp) {
     this.pswp = pswp;
 
-    /** @type {'x' | 'y'} */
-    this.dragAxis = undefined;
+    /** @type {'x' | 'y' | null} */
+    this.dragAxis = null;
 
     // point objects are defined once and reused
     // PhotoSwipe keeps track only of two pointers, others are ignored
     /** @type {Point} */
-    this.p1 = {}; // the first pressed pointer
+    this.p1 = { x: 0, y: 0 }; // the first pressed pointer
     /** @type {Point} */
-    this.p2 = {}; // the second pressed pointer
+    this.p2 = { x: 0, y: 0 }; // the second pressed pointer
     /** @type {Point} */
-    this.prevP1 = {};
+    this.prevP1 = { x: 0, y: 0 };
     /** @type {Point} */
-    this.prevP2 = {};
+    this.prevP2 = { x: 0, y: 0 };
     /** @type {Point} */
-    this.startP1 = {};
+    this.startP1 = { x: 0, y: 0 };
     /** @type {Point} */
-    this.startP2 = {};
+    this.startP2 = { x: 0, y: 0 };
     /** @type {Point} */
-    this.velocity = {};
+    this.velocity = { x: 0, y: 0 };
 
-    /** @type {Point} */
-    this._lastStartP1 = {};
-    /** @type {Point} */
-    this._intervalP1 = {};
+    /** @type {Point}
+     * @private
+     */
+    this._lastStartP1 = { x: 0, y: 0 };
+    /** @type {Point}
+     * @private
+     */
+    this._intervalP1 = { x: 0, y: 0 };
+    /** @private */
     this._numActivePoints = 0;
-    /** @type {Point[]} */
+    /** @type {Point[]}
+     * @private
+     */
     this._ongoingPointers = [];
-
+    /** @private */
     this._touchEventEnabled = 'ontouchstart' in window;
+    /** @private */
     this._pointerEventEnabled = !!(window.PointerEvent);
     this.supportsTouch = this._touchEventEnabled
                           || (this._pointerEventEnabled && navigator.maxTouchPoints > 1);
+    /** @private */
+    this._numActivePoints = 0;
+    /** @private */
+    this._intervalTime = 0;
+    /** @private */
+    this._velocityCalculated = false;
+    this.isMultitouch = false;
+    this.isDragging = false;
+    this.isZooming = false;
+    /** @type {number | null}
+     * @private
+     */
+    this._raf = null;
+    /** @type {NodeJS.Timeout | null}
+     * @private
+     */
+    this._tapTimer = null;
 
     if (!this.supportsTouch) {
       // disable pan to next slide for non-touch devices
@@ -1945,7 +2006,11 @@ class Gestures {
     this.tapHandler = new TapHandler(this);
 
     pswp.on('bindEvents', () => {
-      pswp.events.add(pswp.scrollWrap, 'click', e => this._onClick(e));
+      pswp.events.add(
+        pswp.scrollWrap,
+        'click',
+        /** @type EventListener */(this._onClick.bind(this))
+      );
 
       if (this._pointerEventEnabled) {
         this._bindEvents('pointer', 'down', 'up', 'cancel');
@@ -1960,8 +2025,10 @@ class Gestures {
         // and you don't preventDefault touchstart (which PhotoSwipe does),
         // preventDefault will have no effect on touchmove and touchend.
         // Unless you bind it previously.
-        pswp.scrollWrap.ontouchmove = () => {}; // eslint-disable-line
-        pswp.scrollWrap.ontouchend = () => {}; // eslint-disable-line
+        if (pswp.scrollWrap) {
+          pswp.scrollWrap.ontouchmove = () => {};
+          pswp.scrollWrap.ontouchend = () => {};
+        }
       } else {
         this._bindEvents('mouse', 'down', 'up');
       }
@@ -1969,7 +2036,7 @@ class Gestures {
   }
 
   /**
-   *
+   * @private
    * @param {'mouse' | 'touch' | 'pointer'} pref
    * @param {'down' | 'start'} down
    * @param {'up' | 'end'} up
@@ -1981,11 +2048,19 @@ class Gestures {
 
     const cancelEvent = cancel ? pref + cancel : '';
 
-    events.add(pswp.scrollWrap, pref + down, this.onPointerDown.bind(this));
-    events.add(window, pref + 'move', this.onPointerMove.bind(this));
-    events.add(window, pref + up, this.onPointerUp.bind(this));
+    events.add(
+      pswp.scrollWrap,
+      pref + down,
+      /** @type EventListener */(this.onPointerDown.bind(this))
+    );
+    events.add(window, pref + 'move', /** @type EventListener */(this.onPointerMove.bind(this)));
+    events.add(window, pref + up, /** @type EventListener */(this.onPointerUp.bind(this)));
     if (cancelEvent) {
-      events.add(pswp.scrollWrap, cancelEvent, this.onPointerUp.bind(this));
+      events.add(
+        pswp.scrollWrap,
+        cancelEvent,
+        /** @type EventListener */(this.onPointerUp.bind(this))
+      );
     }
   }
 
@@ -1999,10 +2074,7 @@ class Gestures {
     //
     // Desktop Safari allows to drag images when preventDefault isn't called on mousedown,
     // even though preventDefault IS called on mousemove. That's why we preventDefault mousedown.
-    let isMousePointer;
-    if (e.type === 'mousedown' || e.pointerType === 'mouse') {
-      isMousePointer = true;
-    }
+    const isMousePointer = e.type === 'mousedown' || e.pointerType === 'mouse';
 
     // Allow dragging only via left mouse button.
     // http://www.quirksmode.org/js/events_properties.html
@@ -2035,13 +2107,11 @@ class Gestures {
 
     this._updatePoints(e, 'down');
 
-    this.pointerDown = true;
-
     if (this._numActivePoints === 1) {
       this.dragAxis = null;
       // we need to store initial point to determine the main axis,
       // drag is activated only after the axis is determined
-      equalizePoints(this.startP1, this.p1);
+      this.startP1 = equalizePoints(this.startP1, this.p1);
     }
 
     if (this._numActivePoints > 1) {
@@ -2089,7 +2159,7 @@ class Gestures {
         this._intervalTime = Date.now();
         //this._startTime = this._intervalTime;
         this._velocityCalculated = false;
-        equalizePoints(this._intervalP1, this.p1);
+        this._intervalP1 = equalizePoints(this._intervalP1, this.p1);
         this.velocity.x = 0;
         this.velocity.y = 0;
         this.drag.start();
@@ -2145,7 +2215,6 @@ class Gestures {
     }
 
     if (this._numActivePoints === 0) {
-      this.pointerDown = false;
       this._rafStopLoop();
 
       if (this.isDragging) {
@@ -2188,14 +2257,15 @@ class Gestures {
       }
 
       this._updatePrevPoints();
-      this.raf = requestAnimationFrame(this._rafRenderLoop.bind(this));
+      this._raf = requestAnimationFrame(this._rafRenderLoop.bind(this));
     }
   }
 
   /**
    * Update velocity at 50ms interval
    *
-   * @param {boolean=} force
+   * @private
+   * @param {boolean} [force]
    */
   _updateVelocity(force) {
     const time = Date.now();
@@ -2210,7 +2280,7 @@ class Gestures {
     this.velocity.y = this._getVelocity('y', duration);
 
     this._intervalTime = time;
-    equalizePoints(this._intervalP1, this.p1);
+    this._intervalP1 = equalizePoints(this._intervalP1, this.p1);
     this._velocityCalculated = true;
   }
 
@@ -2253,7 +2323,7 @@ class Gestures {
         this.tapHandler.doubleTap(this.startP1, e);
       }
     } else {
-      equalizePoints(this._lastStartP1, this.startP1);
+      this._lastStartP1 = equalizePoints(this._lastStartP1, this.startP1);
       this._tapTimer = setTimeout(() => {
         this.tapHandler.tap(this.startP1, e);
         this._clearTapTimer();
@@ -2277,6 +2347,7 @@ class Gestures {
    * @private
    * @param {'x' | 'y'} axis
    * @param {number} duration
+   * @returns {number}
    */
   _getVelocity(axis, duration) {
     // displacement is like distance, but can be negative.
@@ -2293,9 +2364,9 @@ class Gestures {
    * @private
    */
   _rafStopLoop() {
-    if (this.raf) {
-      cancelAnimationFrame(this.raf);
-      this.raf = null;
+    if (this._raf) {
+      cancelAnimationFrame(this._raf);
+      this._raf = null;
     }
   }
 
@@ -2307,7 +2378,6 @@ class Gestures {
     // TODO find a way to disable e.preventDefault on some elements
     //      via event or some class or something
     e.preventDefault();
-    return true;
   }
 
   /**
@@ -2322,8 +2392,8 @@ class Gestures {
     if (this._pointerEventEnabled) {
       const pointerEvent = /** @type {PointerEvent} */ (e);
       // Try to find the current pointer in ongoing pointers by its ID
-      const pointerIndex = this._ongoingPointers.findIndex((ongoingPoiner) => {
-        return ongoingPoiner.id === pointerEvent.pointerId;
+      const pointerIndex = this._ongoingPointers.findIndex((ongoingPointer) => {
+        return ongoingPointer.id === pointerEvent.pointerId;
       });
 
       if (pointerType === 'up' && pointerIndex > -1) {
@@ -2331,7 +2401,7 @@ class Gestures {
         this._ongoingPointers.splice(pointerIndex, 1);
       } else if (pointerType === 'down' && pointerIndex === -1) {
         // add new pointer
-        this._ongoingPointers.push(this._convertEventPosToPoint(pointerEvent, {}));
+        this._ongoingPointers.push(this._convertEventPosToPoint(pointerEvent, { x: 0, y: 0 }));
       } else if (pointerIndex > -1) {
         // update existing pointer
         this._convertEventPosToPoint(pointerEvent, this._ongoingPointers[pointerIndex]);
@@ -2342,11 +2412,11 @@ class Gestures {
       // update points that PhotoSwipe uses
       // to calculate position and scale
       if (this._numActivePoints > 0) {
-        equalizePoints(this.p1, this._ongoingPointers[0]);
+        this.p1 = equalizePoints(this.p1, this._ongoingPointers[0]);
       }
 
       if (this._numActivePoints > 1) {
-        equalizePoints(this.p2, this._ongoingPointers[1]);
+        this.p2 = equalizePoints(this.p2, this._ongoingPointers[1]);
       }
     } else {
       const touchEvent = /** @type {TouchEvent} */ (e);
@@ -2376,19 +2446,24 @@ class Gestures {
     }
   }
 
-  // update points that were used during previous rAF tick
+  /** update points that were used during previous rAF tick
+   * @private
+   */
   _updatePrevPoints() {
-    equalizePoints(this.prevP1, this.p1);
-    equalizePoints(this.prevP2, this.p2);
+    this.prevP1 = equalizePoints(this.prevP1, this.p1);
+    this.prevP2 = equalizePoints(this.prevP2, this.p2);
   }
 
-  // update points at the start of gesture
+  /** update points at the start of gesture
+   * @private
+   */
   _updateStartPoints() {
-    equalizePoints(this.startP1, this.p1);
-    equalizePoints(this.startP2, this.p2);
+    this.startP1 = equalizePoints(this.startP1, this.p1);
+    this.startP2 = equalizePoints(this.startP2, this.p2);
     this._updatePrevPoints();
   }
 
+  /** @private */
   _calculateDragDirection() {
     if (this.pswp.mainScroll.isShifted()) {
       // if main scroll position is shifted – direction is always horizontal
@@ -2415,6 +2490,7 @@ class Gestures {
    * @private
    * @param {Touch | PointerEvent} e
    * @param {Point} p
+   * @returns {Point}
    */
   _convertEventPosToPoint(e, p) {
     p.x = e.pageX - this.pswp.offset.x;
@@ -2467,21 +2543,23 @@ class MainScroll {
   constructor(pswp) {
     this.pswp = pswp;
     this.x = 0;
-
-    /** @type {number} */
-    this.slideWidth = undefined;
+    this.slideWidth = 0;
+    /** @private */
+    this._currPositionIndex = 0;
+    /** @private */
+    this._prevPositionIndex = 0;
+    /** @private */
+    this._containerShiftIndex = -1;
 
     /** @type {ItemHolder[]} */
-    this.itemHolders = undefined;
-
-    this.resetPosition();
+    this.itemHolders = [];
   }
 
   /**
    * Position the scroller and slide containers
    * according to viewport size.
    *
-   * @param {boolean=} resizeSlides Whether slides content should resized
+   * @param {boolean} [resizeSlides] Whether slides content should resized
    */
   resize(resizeSlides) {
     const { pswp } = this;
@@ -2536,7 +2614,7 @@ class MainScroll {
     // append our three slide holders -
     // previous, current, and next
     for (let i = 0; i < 3; i++) {
-      const el = createElement('pswp__item', false, this.pswp.container);
+      const el = createElement('pswp__item', 'div', this.pswp.container);
       el.setAttribute('role', 'group');
       el.setAttribute('aria-roledescription', 'slide');
       el.setAttribute('aria-hidden', 'true');
@@ -2553,6 +2631,7 @@ class MainScroll {
 
   /**
    * Whether the main scroll can be horizontally swiped to the next or previous slide.
+   * @returns {boolean}
    */
   canBeSwiped() {
     return this.pswp.getNumItems() > 1;
@@ -2569,8 +2648,8 @@ class MainScroll {
    * (for example `-1` will move to the last slide of the gallery).
    *
    * @param {number} diff
-   * @param {boolean=} animate
-   * @param {number=} velocityX
+   * @param {boolean} [animate]
+   * @param {number} [velocityX]
    * @returns {boolean} whether index was changed or not
    */
   moveIndexBy(diff, animate, velocityX) {
@@ -2642,14 +2721,13 @@ class MainScroll {
       }
     }
 
-    if (diff) {
-      return true;
-    }
+    return Boolean(diff);
   }
 
   /**
    * X position of the main scroll for the current slide
    * (ignores position during dragging)
+   * @returns {number}
    */
   getCurrSlideX() {
     return this.slideWidth * this._currPositionIndex;
@@ -2658,6 +2736,7 @@ class MainScroll {
   /**
    * Whether scroll position is shifted.
    * For example, it will return true if the scroll is being dragged or animated.
+   * @returns {boolean}
    */
   isShifted() {
     return this.x !== this.getCurrSlideX();
@@ -2679,6 +2758,7 @@ class MainScroll {
     pswp.currIndex = pswp.potentialIndex;
 
     let diffAbs = Math.abs(positionDifference);
+    /** @type {ItemHolder | undefined} */
     let tempHolder;
 
     if (diffAbs >= 3) {
@@ -2689,22 +2769,26 @@ class MainScroll {
     for (let i = 0; i < diffAbs; i++) {
       if (positionDifference > 0) {
         tempHolder = this.itemHolders.shift();
-        this.itemHolders[2] = tempHolder; // move first to last
+        if (tempHolder) {
+          this.itemHolders[2] = tempHolder; // move first to last
 
-        this._containerShiftIndex++;
+          this._containerShiftIndex++;
 
-        setTransform(tempHolder.el, (this._containerShiftIndex + 2) * this.slideWidth);
+          setTransform(tempHolder.el, (this._containerShiftIndex + 2) * this.slideWidth);
 
-        pswp.setContent(tempHolder, (pswp.currIndex - diffAbs) + i + 2);
+          pswp.setContent(tempHolder, (pswp.currIndex - diffAbs) + i + 2);
+        }
       } else {
         tempHolder = this.itemHolders.pop();
-        this.itemHolders.unshift(tempHolder); // move last to first
+        if (tempHolder) {
+          this.itemHolders.unshift(tempHolder); // move last to first
 
-        this._containerShiftIndex--;
+          this._containerShiftIndex--;
 
-        setTransform(tempHolder.el, this._containerShiftIndex * this.slideWidth);
+          setTransform(tempHolder.el, this._containerShiftIndex * this.slideWidth);
 
-        pswp.setContent(tempHolder, (pswp.currIndex + diffAbs) - i - 2);
+          pswp.setContent(tempHolder, (pswp.currIndex + diffAbs) - i - 2);
+        }
       }
     }
 
@@ -2729,7 +2813,7 @@ class MainScroll {
       }
     });
 
-    pswp.currSlide = this.itemHolders[1].slide;
+    pswp.currSlide = this.itemHolders[1]?.slide;
     pswp.contentLoader.updateLazy(positionDifference);
 
     if (pswp.currSlide) {
@@ -2743,19 +2827,14 @@ class MainScroll {
    * Move the X position of the main scroll container
    *
    * @param {number} x
-   * @param {boolean=} dragging
+   * @param {boolean} [dragging]
    */
   moveTo(x, dragging) {
-    /** @type {number} */
-    let newSlideIndexOffset;
-    /** @type {number} */
-    let delta;
-
     if (!this.pswp.canLoop() && dragging) {
       // Apply friction
-      newSlideIndexOffset = ((this.slideWidth * this._currPositionIndex) - x) / this.slideWidth;
+      let newSlideIndexOffset = ((this.slideWidth * this._currPositionIndex) - x) / this.slideWidth;
       newSlideIndexOffset += this.pswp.currIndex;
-      delta = Math.round(x - this.x);
+      const delta = Math.round(x - this.x);
 
       if ((newSlideIndexOffset < 0 && delta > 0)
           || (newSlideIndexOffset >= this.pswp.getNumItems() - 1 && delta < 0)) {
@@ -2764,9 +2843,12 @@ class MainScroll {
     }
 
     this.x = x;
-    setTransform(this.pswp.container, x);
 
-    this.pswp.dispatch('moveMainScroll', { x, dragging });
+    if (this.pswp.container) {
+      setTransform(this.pswp.container, x);
+    }
+
+    this.pswp.dispatch('moveMainScroll', { x, dragging: dragging ?? false });
   }
 }
 
@@ -2777,9 +2859,29 @@ class MainScroll {
  * @typedef {import('./types.js').Methods<T>} Methods<T>
  */
 
+const KeyboardKeyCodesMap = {
+  Escape: 27,
+  z: 90,
+  ArrowLeft: 37,
+  ArrowUp: 38,
+  ArrowRight: 39,
+  ArrowDown: 40,
+  Tab: 9,
+};
+
+/**
+ * @template {keyof KeyboardKeyCodesMap} T
+ * @param {T} key
+ * @param {boolean} isKeySupported
+ * @returns {T | number | undefined}
+ */
+const getKeyboardEventKey = (key, isKeySupported) => {
+  return isKeySupported ? key : KeyboardKeyCodesMap[key];
+};
+
 /**
  * - Manages keyboard shortcuts.
- * - Heps trap focus within photoswipe.
+ * - Helps trap focus within photoswipe.
  */
 class Keyboard {
   /**
@@ -2787,6 +2889,8 @@ class Keyboard {
    */
   constructor(pswp) {
     this.pswp = pswp;
+    /** @private */
+    this._wasFocused = false;
 
     pswp.on('bindEvents', () => {
       // Dialog was likely opened by keyboard if initial point is not defined
@@ -2797,8 +2901,8 @@ class Keyboard {
         this._focusRoot();
       }
 
-      pswp.events.add(document, 'focusin', this._onFocusIn.bind(this));
-      pswp.events.add(document, 'keydown', this._onKeyDown.bind(this));
+      pswp.events.add(document, 'focusin', /** @type EventListener */(this._onFocusIn.bind(this)));
+      pswp.events.add(document, 'keydown', /** @type EventListener */(this._onKeyDown.bind(this)));
     });
 
     const lastActiveElement = /** @type {HTMLElement} */ (document.activeElement);
@@ -2811,14 +2915,16 @@ class Keyboard {
     });
   }
 
+  /** @private */
   _focusRoot() {
-    if (!this._wasFocused) {
+    if (!this._wasFocused && this.pswp.element) {
       this.pswp.element.focus();
       this._wasFocused = true;
     }
   }
 
   /**
+   * @private
    * @param {KeyboardEvent} e
    */
   _onKeyDown(e) {
@@ -2835,36 +2941,37 @@ class Keyboard {
       return;
     }
 
-    /** @type {Methods<PhotoSwipe>} */
+    /** @type {Methods<PhotoSwipe> | undefined} */
     let keydownAction;
-    /** @type {'x' | 'y'} */
+    /** @type {'x' | 'y' | undefined} */
     let axis;
-    let isForward;
+    let isForward = false;
+    const isKeySupported = 'key' in e;
 
-    switch (e.keyCode) {
-      case 27: // esc
+    switch (isKeySupported ? e.key : e.keyCode) {
+      case getKeyboardEventKey('Escape', isKeySupported):
         if (pswp.options.escKey) {
           keydownAction = 'close';
         }
         break;
-      case 90: // z key
+      case getKeyboardEventKey('z', isKeySupported):
         keydownAction = 'toggleZoom';
         break;
-      case 37: // left
+      case getKeyboardEventKey('ArrowLeft', isKeySupported):
         axis = 'x';
         break;
-      case 38: // top
+      case getKeyboardEventKey('ArrowUp', isKeySupported):
         axis = 'y';
         break;
-      case 39: // right
+      case getKeyboardEventKey('ArrowRight', isKeySupported):
         axis = 'x';
         isForward = true;
         break;
-      case 40: // bottom
+      case getKeyboardEventKey('ArrowDown', isKeySupported):
         isForward = true;
         axis = 'y';
         break;
-      case 9: // tab
+      case getKeyboardEventKey('Tab', isKeySupported):
         this._focusRoot();
         break;
     }
@@ -2892,6 +2999,7 @@ class Keyboard {
 
     if (keydownAction) {
       e.preventDefault();
+      // @ts-ignore
       pswp[keydownAction]();
     }
   }
@@ -2899,11 +3007,13 @@ class Keyboard {
   /**
    * Trap focus inside photoswipe
    *
+   * @private
    * @param {FocusEvent} e
    */
   _onFocusIn(e) {
     const { template } = this.pswp;
-    if (document !== e.target
+    if (template
+        && document !== e.target
         && template !== e.target
         && !template.contains(/** @type {Node} */ (e.target))) {
       // focus root element
@@ -2914,7 +3024,18 @@ class Keyboard {
 
 const DEFAULT_EASING = 'cubic-bezier(.4,0,.22,1)';
 
-/** @typedef {import('./animations.js').AnimationProps} AnimationProps */
+/** @typedef {import('./animations.js').SharedAnimationProps} SharedAnimationProps */
+
+/** @typedef {Object} DefaultCssAnimationProps
+ *
+ * @prop {HTMLElement} target
+ * @prop {number} [duration]
+ * @prop {string} [easing]
+ * @prop {string} [transform]
+ * @prop {string} [opacity]
+ * */
+
+/** @typedef {SharedAnimationProps & DefaultCssAnimationProps} CssAnimationProps */
 
 /**
  * Runs CSS transition.
@@ -2923,7 +3044,7 @@ class CSSAnimation {
   /**
    * onComplete can be unpredictable, be careful about current state
    *
-   * @param {AnimationProps} props
+   * @param {CssAnimationProps} props
    */
   constructor(props) {
     this.props = props;
@@ -2931,36 +3052,30 @@ class CSSAnimation {
       target,
       onComplete,
       transform,
-      onFinish
-      // opacity
+      onFinish = () => {},
+      duration = 333,
+      easing = DEFAULT_EASING,
     } = props;
 
-    let {
-      duration,
-      easing,
-    } = props;
-
-    /** @type {() => void} */
     this.onFinish = onFinish;
 
     // support only transform and opacity
     const prop = transform ? 'transform' : 'opacity';
-    const propValue = props[prop];
+    const propValue = props[prop] ?? '';
 
     /** @private */
     this._target = target;
     /** @private */
     this._onComplete = onComplete;
-
-    duration = duration || 333;
-    easing = easing || DEFAULT_EASING;
+    /** @private */
+    this._finished = false;
 
     /** @private */
     this._onTransitionEnd = this._onTransitionEnd.bind(this);
 
     // Using timeout hack to make sure that animation
     // starts even if the animated property was changed recently,
-    // otherwise transitionend might not fire or transiton won't start.
+    // otherwise transitionend might not fire or transition won't start.
     // https://drafts.csswg.org/css-transitions/#starting
     //
     // ¯\_(ツ)_/¯
@@ -2972,7 +3087,7 @@ class CSSAnimation {
         target.addEventListener('transitioncancel', this._onTransitionEnd, false);
 
         // Safari occasionally does not emit transitionend event
-        // if element propery was modified during the transition,
+        // if element property was modified during the transition,
         // which may be caused by resize or third party component,
         // using timeout as a safety fallback
         this._helperTimeout = setTimeout(() => {
@@ -3030,13 +3145,13 @@ class SpringEaser {
   /**
    * @param {number} initialVelocity Initial velocity, px per ms.
    *
-   * @param {number} dampingRatio
+   * @param {number} [dampingRatio]
    * Determines how bouncy animation will be.
    * From 0 to 1, 0 - always overshoot, 1 - do not overshoot.
    * "overshoot" refers to part of animation that
    * goes beyond the final value.
    *
-   * @param {number} naturalFrequency
+   * @param {number} [naturalFrequency]
    * Determines how fast animation will slow down.
    * The higher value - the stiffer the transition will be,
    * and the faster it will slow down.
@@ -3051,9 +3166,10 @@ class SpringEaser {
     // https://en.wikipedia.org/wiki/Natural_frequency
     this._naturalFrequency = naturalFrequency || DEFAULT_NATURAL_FREQUENCY;
 
+    this._dampedFrequency = this._naturalFrequency;
+
     if (this._dampingRatio < 1) {
-      this._dampedFrequency = this._naturalFrequency
-                         * Math.sqrt(1 - this._dampingRatio * this._dampingRatio);
+      this._dampedFrequency *= Math.sqrt(1 - this._dampingRatio * this._dampingRatio);
     }
   }
 
@@ -3108,14 +3224,28 @@ class SpringEaser {
   }
 }
 
-/** @typedef {import('./animations.js').AnimationProps} AnimationProps */
+/** @typedef {import('./animations.js').SharedAnimationProps} SharedAnimationProps */
+
+/**
+ * @typedef {Object} DefaultSpringAnimationProps
+ *
+ * @prop {number} start
+ * @prop {number} end
+ * @prop {number} velocity
+ * @prop {number} [dampingRatio]
+ * @prop {number} [naturalFrequency]
+ * @prop {(end: number) => void} onUpdate
+ */
+
+/** @typedef {SharedAnimationProps & DefaultSpringAnimationProps} SpringAnimationProps */
 
 class SpringAnimation {
   /**
-   * @param {AnimationProps} props
+   * @param {SpringAnimationProps} props
    */
   constructor(props) {
     this.props = props;
+    this._raf = 0;
 
     const {
       start,
@@ -3123,12 +3253,11 @@ class SpringAnimation {
       velocity,
       onUpdate,
       onComplete,
-      onFinish,
+      onFinish = () => {},
       dampingRatio,
       naturalFrequency
     } = props;
 
-    /** @type {() => void} */
     this.onFinish = onFinish;
 
     const easer = new SpringEaser(velocity, dampingRatio, naturalFrequency);
@@ -3163,37 +3292,23 @@ class SpringAnimation {
     if (this._raf >= 0) {
       cancelAnimationFrame(this._raf);
     }
-    this._raf = null;
+    this._raf = 0;
   }
 }
 
-/** @typedef {SpringAnimation | CSSAnimation} Animation */
+/** @typedef {import('./css-animation.js').CssAnimationProps} CssAnimationProps */
+/** @typedef {import('./spring-animation.js').SpringAnimationProps} SpringAnimationProps */
 
-/**
- * @typedef {Object} AnimationProps
- *
- * @prop {HTMLElement=} target
- *
- * @prop {string=} name
- *
- * @prop {number=} start
- * @prop {number=} end
- * @prop {number=} duration
- * @prop {number=} velocity
- * @prop {number=} dampingRatio
- * @prop {number=} naturalFrequency
- *
- * @prop {(end: number) => void} [onUpdate]
- * @prop {() => void} [onComplete]
- * @prop {() => void} [onFinish]
- *
- * @prop {string=} transform
- * @prop {string=} opacity
- * @prop {string=} easing
- *
- * @prop {boolean=} isPan
- * @prop {boolean=} isMainScroll
+/** @typedef {Object} SharedAnimationProps
+ * @prop {string} [name]
+ * @prop {boolean} [isPan]
+ * @prop {boolean} [isMainScroll]
+ * @prop {VoidFunction} [onComplete]
+ * @prop {VoidFunction} [onFinish]
  */
+
+/** @typedef {SpringAnimation | CSSAnimation} Animation */
+/** @typedef {SpringAnimationProps | CssAnimationProps} AnimationProps */
 
 /**
  * Manages animations
@@ -3205,36 +3320,31 @@ class Animations {
   }
 
   /**
-   * @param {AnimationProps} props
+   * @param {SpringAnimationProps} props
    */
   startSpring(props) {
     this._start(props, true);
   }
 
   /**
-   * @param {AnimationProps} props
+   * @param {CssAnimationProps} props
    */
   startTransition(props) {
     this._start(props);
   }
 
   /**
+   * @private
    * @param {AnimationProps} props
-   * @param {boolean=} isSpring
+   * @param {boolean} [isSpring]
    */
   _start(props, isSpring) {
-    /** @type {Animation} */
-    let animation;
-    if (isSpring) {
-      animation = new SpringAnimation(props);
-    } else {
-      animation = new CSSAnimation(props);
-    }
+    const animation = isSpring
+      ? new SpringAnimation(/** @type SpringAnimationProps */ (props))
+      : new CSSAnimation(/** @type CssAnimationProps */ (props));
 
     this.activeAnimations.push(animation);
     animation.onFinish = () => this.stop(animation);
-
-    return animation;
   }
 
   /**
@@ -3311,7 +3421,7 @@ class ScrollWheel {
    */
   constructor(pswp) {
     this.pswp = pswp;
-    pswp.events.add(pswp.element, 'wheel', this._onWheel.bind(this));
+    pswp.events.add(pswp.element, 'wheel', /** @type EventListener */(this._onWheel.bind(this)));
   }
 
   /**
@@ -3375,25 +3485,25 @@ class ScrollWheel {
 
 /**
  * @typedef {Object} UIElementMarkupProps
- * @prop {boolean=} isCustomSVG
+ * @prop {boolean} [isCustomSVG]
  * @prop {string} inner
- * @prop {string=} outlineID
+ * @prop {string} [outlineID]
  * @prop {number | string} [size]
  */
 
 /**
  * @typedef {Object} UIElementData
  * @prop {DefaultUIElements | string} [name]
- * @prop {string=} className
- * @prop {UIElementMarkup=} html
- * @prop {boolean=} isButton
+ * @prop {string} [className]
+ * @prop {UIElementMarkup} [html]
+ * @prop {boolean} [isButton]
  * @prop {keyof HTMLElementTagNameMap} [tagName]
- * @prop {string=} title
- * @prop {string=} ariaLabel
+ * @prop {string} [title]
+ * @prop {string} [ariaLabel]
  * @prop {(element: HTMLElement, pswp: PhotoSwipe) => void} [onInit]
  * @prop {Methods<PhotoSwipe> | ((e: MouseEvent, element: HTMLElement, pswp: PhotoSwipe) => void)} [onClick]
  * @prop {'bar' | 'wrapper' | 'root'} [appendTo]
- * @prop {number=} order
+ * @prop {number} [order]
  */
 
 /** @typedef {'arrowPrev' | 'arrowNext' | 'close' | 'zoom' | 'counter'} DefaultUIElements */
@@ -3402,6 +3512,7 @@ class ScrollWheel {
 
 /**
  * @param {UIElementMarkup} [htmlData]
+ * @returns {string}
  */
 function addElementHTML(htmlData) {
   if (typeof htmlData === 'string') {
@@ -3476,15 +3587,12 @@ class UIElement {
       className += (data.className || `pswp__${data.name}`);
     }
 
-    /** @type {HTMLElement} */
-    let element;
     let tagName = data.isButton ? (data.tagName || 'button') : (data.tagName || 'div');
     tagName = /** @type {keyof HTMLElementTagNameMap} */ (tagName.toLowerCase());
-    element = createElement(className, tagName);
+    /** @type {HTMLElement} */
+    const element = createElement(className, tagName);
 
     if (data.isButton) {
-      // create button element
-      element = createElement(className, tagName);
       if (tagName === 'button') {
         /** @type {HTMLButtonElement} */ (element).type = 'button';
       }
@@ -3502,8 +3610,9 @@ class UIElement {
         element.title = title;
       }
 
-      if (ariaLabel || title) {
-        /** @type {HTMLElement} */ (element).setAttribute('aria-label', ariaLabel || title);
+      const ariaText = ariaLabel || title;
+      if (ariaText) {
+        element.setAttribute('aria-label', ariaText);
       }
     }
 
@@ -3516,8 +3625,9 @@ class UIElement {
     if (data.onClick) {
       element.onclick = (e) => {
         if (typeof data.onClick === 'string') {
+          // @ts-ignore
           pswp[data.onClick]();
-        } else {
+        } else if (typeof data.onClick === 'function') {
           data.onClick(e, element, pswp);
         }
       };
@@ -3525,7 +3635,8 @@ class UIElement {
 
     // Top bar is default position
     const appendTo = data.appendTo || 'bar';
-    let container;
+    /** @type {HTMLElement | undefined} root element by default */
+    let container = pswp.element;
     if (appendTo === 'bar') {
       if (!pswp.topBar) {
         pswp.topBar = createElement('pswp__top-bar pswp__hide-on-close', 'div', pswp.scrollWrap);
@@ -3538,13 +3649,10 @@ class UIElement {
 
       if (appendTo === 'wrapper') {
         container = pswp.scrollWrap;
-      } else {
-        // root element
-        container = pswp.element;
       }
     }
 
-    container.appendChild(pswp.applyFilters('uiElement', element, data));
+    container?.appendChild(pswp.applyFilters('uiElement', element, data));
   }
 }
 
@@ -3559,7 +3667,7 @@ class UIElement {
  *
  * @param {HTMLElement} element
  * @param {PhotoSwipe} pswp
- * @param {boolean=} isNextButton
+ * @param {boolean} [isNextButton]
  */
 function initArrowButton(element, pswp, isNextButton) {
   element.classList.add('pswp__button--arrow');
@@ -3659,10 +3767,10 @@ const loadingIndicator = {
     outlineID: 'pswp__icn-loading'
   },
   onInit: (indicatorElement, pswp) => {
-    /** @type {boolean} */
+    /** @type {boolean | undefined} */
     let isVisible;
-    /** @type {NodeJS.Timeout} */
-    let delayTimeout;
+    /** @type {NodeJS.Timeout | null} */
+    let delayTimeout = null;
 
     /**
      * @param {string} className
@@ -3683,7 +3791,7 @@ const loadingIndicator = {
     };
 
     const updatePreloaderVisibility = () => {
-      if (!pswp.currSlide.content.isLoading()) {
+      if (!pswp.currSlide?.content.isLoading()) {
         setIndicatorVisibility(false);
         if (delayTimeout) {
           clearTimeout(delayTimeout);
@@ -3695,7 +3803,7 @@ const loadingIndicator = {
       if (!delayTimeout) {
         // display loading indicator with delay
         delayTimeout = setTimeout(() => {
-          setIndicatorVisibility(pswp.currSlide.content.isLoading());
+          setIndicatorVisibility(Boolean(pswp.currSlide?.content.isLoading()));
           delayTimeout = null;
         }, pswp.options.preloaderDelay);
       }
@@ -3708,9 +3816,6 @@ const loadingIndicator = {
         updatePreloaderVisibility();
       }
     });
-
-    // expose the method
-    pswp.ui.updatePreloaderVisibility = updatePreloaderVisibility;
   }
 };
 
@@ -3733,7 +3838,7 @@ const counterIndicator = {
 /**
  * Set special class on element when image is zoomed.
  *
- * By default it is used to adjust
+ * By default, it is used to adjust
  * zoom icon and zoom cursor via CSS.
  *
  * @param {HTMLElement} el
@@ -3749,18 +3854,22 @@ class UI {
    */
   constructor(pswp) {
     this.pswp = pswp;
+    this.isRegistered = false;
+    /** @type {UIElementData[]} */
+    this.uiElementsData = [];
+    /** @type {(UIElement | UIElementData)[]} */
+    this.items = [];
 
-    /** @type {() => void} */
-    this.updatePreloaderVisibility = undefined;
-
-    /** @type {number} */
+    /**
+     * @private
+     * @type {number | undefined}
+     */
     this._lastUpdatedZoomLevel = undefined;
   }
 
   init() {
     const { pswp } = this;
     this.isRegistered = false;
-    /** @type {UIElementData[]} */
     this.uiElementsData = [
       closeButton,
       arrowPrev,
@@ -3778,7 +3887,6 @@ class UI {
       return (a.order || 0) - (b.order || 0);
     });
 
-    /** @type {(UIElement | UIElementData)[]} */
     this.items = [];
 
     this.isRegistered = true;
@@ -3787,7 +3895,7 @@ class UI {
     });
 
     pswp.on('change', () => {
-      pswp.element.classList[pswp.getNumItems() === 1 ? 'add' : 'remove']('pswp--one-slide');
+      pswp.element?.classList[pswp.getNumItems() === 1 ? 'add' : 'remove']('pswp--one-slide');
     });
 
     pswp.on('zoomPanUpdate', () => this._onZoomPanUpdate());
@@ -3809,14 +3917,17 @@ class UI {
   /**
    * Fired each time zoom or pan position is changed.
    * Update classes that control visibility of zoom button and cursor icon.
+   *
+   * @private
    */
   _onZoomPanUpdate() {
     const { template, currSlide, options } = this.pswp;
-    let { currZoomLevel } = currSlide;
 
-    if (this.pswp.opener.isClosing) {
+    if (this.pswp.opener.isClosing || !template || !currSlide) {
       return;
     }
+
+    let { currZoomLevel } = currSlide;
 
     // if not open yet - check against initial zoom level
     if (!this.pswp.opener.isOpen) {
@@ -3859,6 +3970,7 @@ class UI {
 
 /**
  * @param {HTMLElement} el
+ * @returns Bounds
  */
 function getBoundsByElement(el) {
   const thumbAreaRect = el.getBoundingClientRect();
@@ -3873,6 +3985,7 @@ function getBoundsByElement(el) {
  * @param {HTMLElement} el
  * @param {number} imageWidth
  * @param {number} imageHeight
+ * @returns Bounds
  */
 function getCroppedBoundsByElement(el, imageWidth, imageHeight) {
   const thumbAreaRect = el.getBoundingClientRect();
@@ -3918,7 +4031,7 @@ function getCroppedBoundsByElement(el, imageWidth, imageHeight) {
  * @param {number} index
  * @param {SlideData} itemData
  * @param {PhotoSwipe} instance PhotoSwipe instance
- * @returns {Bounds | undefined}
+ * @returns {Bounds | null}
  */
 function getThumbBounds(index, itemData, instance) {
   // legacy event, before filters were introduced
@@ -3934,9 +4047,10 @@ function getThumbBounds(index, itemData, instance) {
   }
 
   const { element } = itemData;
+  /** @type {Bounds | undefined} */
   let thumbBounds;
-  /** @type {HTMLElement} */
-  let thumbnail;
+  /** @type {HTMLElement | null} */
+  let thumbnail = null;
 
   if (element && instance.options.thumbSelector !== false) {
     const thumbSelector = instance.options.thumbSelector || 'img';
@@ -3944,26 +4058,28 @@ function getThumbBounds(index, itemData, instance) {
       ? element : element.querySelector(thumbSelector);
   }
 
-  thumbnail = instance.applyFilters('thumbEl', thumbnail, itemData, index);
-
   if (thumbnail) {
+    thumbnail = instance.applyFilters('thumbEl', thumbnail, itemData, index);
+
     if (!itemData.thumbCropped) {
       thumbBounds = getBoundsByElement(thumbnail);
     } else {
       thumbBounds = getCroppedBoundsByElement(
         thumbnail,
-        itemData.width || itemData.w,
-        itemData.height || itemData.h
+        itemData.width || itemData.w || 0,
+        itemData.height || itemData.h || 0
       );
     }
   }
 
-  return instance.applyFilters('thumbBounds', thumbBounds, itemData, index);
+  return thumbBounds
+    ? instance.applyFilters('thumbBounds', thumbBounds, itemData, index)
+    : null;
 }
 
 /** @typedef {import('../lightbox/lightbox.js').default} PhotoSwipeLightbox */
 /** @typedef {import('../photoswipe.js').default} PhotoSwipe */
-/** @typedef {import('../photoswipe.js').PhotoSwipeOptions} PhotoSwipeOptions */
+/** @typedef {import('../photoswipe.js').PreparedPhotoSwipeOptions} PreparedPhotoSwipeOptions */
 /** @typedef {import('../photoswipe.js').DataSource} DataSource */
 /** @typedef {import('../ui/ui-element.js').UIElementData} UIElementData */
 /** @typedef {import('../slide/content.js').default} ContentDefault */
@@ -4049,7 +4165,7 @@ function getThumbBounds(index, itemData, instance) {
  * @prop {{ originalEvent: KeyboardEvent }} keydown can be default prevented
  * @prop {{ x: number; dragging: boolean }} moveMainScroll
  * @prop {{ slide: Slide }} firstZoomPan
- * @prop {{ slide: Slide, data: SlideData, index: number }} gettingData
+ * @prop {{ slide: Slide | undefined, data: SlideData, index: number }} gettingData
  * @prop {undefined} beforeResize
  * @prop {undefined} resize
  * @prop {undefined} viewportSize
@@ -4062,7 +4178,7 @@ function getThumbBounds(index, itemData, instance) {
  * @prop {{ slide: Slide }} slideActivate
  * @prop {{ slide: Slide }} slideDeactivate
  * @prop {{ slide: Slide }} slideDestroy
- * @prop {{ destZoomLevel: number, centerPoint: Point, transitionDuration: number | false }} beforeZoomTo
+ * @prop {{ destZoomLevel: number, centerPoint: Point | undefined, transitionDuration: number | false | undefined }} beforeZoomTo
  * @prop {{ slide: Slide }} zoomPanUpdate
  * @prop {{ slide: Slide }} initialZoomPan
  * @prop {{ slide: Slide }} calcSlideSize
@@ -4149,7 +4265,7 @@ function getThumbBounds(index, itemData, instance) {
 
 /**
  * @template {keyof PhotoSwipeFiltersMap} T
- * @typedef {{ fn: PhotoSwipeFiltersMap[T], priority: number }} Filter<T>
+ * @typedef {{ fn: PhotoSwipeFiltersMap[T], priority: number }} Filter
  */
 
 /**
@@ -4159,8 +4275,37 @@ function getThumbBounds(index, itemData, instance) {
 
 /**
  * @template {keyof PhotoSwipeEventsMap} T
- * @typedef {(event: AugmentedEvent<T>) => void} EventCallback<T>
+ * @typedef {(event: AugmentedEvent<T>) => void} EventCallback
  */
+
+/** @type {PreparedPhotoSwipeOptions} */
+const defaultOptions = {
+  allowPanToNext: true,
+  spacing: 0.1,
+  loop: true,
+  pinchToClose: true,
+  closeOnVerticalDrag: true,
+  hideAnimationDuration: 333,
+  showAnimationDuration: 333,
+  zoomAnimationDuration: 333,
+  escKey: true,
+  arrowKeys: true,
+  returnFocus: true,
+  maxWidthToAnimate: 4000,
+  clickToCloseNonZoomable: true,
+  imageClickAction: 'zoom-or-close',
+  bgClickAction: 'close',
+  tapAction: 'toggle-controls',
+  doubleTapAction: 'zoom',
+  indexIndicatorSep: ' / ',
+  preloaderDelay: 2000,
+  bgOpacity: 0.8,
+
+  index: 0,
+  errorMsg: 'The image cannot be loaded',
+  preload: [1, 2],
+  easing: 'cubic-bezier(.4,0,.22,1)'
+};
 
 /**
  * Base PhotoSwipe event object
@@ -4174,6 +4319,7 @@ class PhotoSwipeEvent {
    */
   constructor(type, details) {
     this.type = type;
+    this.defaultPrevented = false;
     if (details) {
       Object.assign(this, details);
     }
@@ -4200,11 +4346,11 @@ class Eventable {
      */
     this._filters = {};
 
-    /** @type {PhotoSwipe=} */
+    /** @type {PhotoSwipe | undefined} */
     this.pswp = undefined;
 
-    /** @type {PhotoSwipeOptions} */
-    this.options = undefined;
+    /** @type {PreparedPhotoSwipeOptions} */
+    this.options = defaultOptions;
   }
 
   /**
@@ -4218,12 +4364,10 @@ class Eventable {
       this._filters[name] = [];
     }
 
-    this._filters[name].push({ fn, priority });
-    this._filters[name].sort((f1, f2) => f1.priority - f2.priority);
+    this._filters[name]?.push({ fn, priority });
+    this._filters[name]?.sort((f1, f2) => f1.priority - f2.priority);
 
-    if (this.pswp) {
-      this.pswp.addFilter(name, fn, priority);
-    }
+    this.pswp?.addFilter(name, fn, priority);
   }
 
   /**
@@ -4249,12 +4393,10 @@ class Eventable {
    * @returns {Parameters<PhotoSwipeFiltersMap[T]>[0]}
    */
   applyFilters(name, ...args) {
-    if (this._filters[name]) {
-      this._filters[name].forEach((filter) => {
-        // @ts-expect-error
-        args[0] = filter.fn.apply(this, args);
-      });
-    }
+    this._filters[name]?.forEach((filter) => {
+      // @ts-expect-error
+      args[0] = filter.fn.apply(this, args);
+    });
     return args[0];
   }
 
@@ -4267,14 +4409,12 @@ class Eventable {
     if (!this._listeners[name]) {
       this._listeners[name] = [];
     }
-    this._listeners[name].push(fn);
+    this._listeners[name]?.push(fn);
 
     // When binding events to lightbox,
     // also bind events to PhotoSwipe Core,
     // if it's open.
-    if (this.pswp) {
-      this.pswp.on(name, fn);
-    }
+    this.pswp?.on(name, fn);
   }
 
   /**
@@ -4288,9 +4428,7 @@ class Eventable {
       this._listeners[name] = this._listeners[name].filter(listener => (fn !== listener));
     }
 
-    if (this.pswp) {
-      this.pswp.off(name, fn);
-    }
+    this.pswp?.off(name, fn);
   }
 
   /**
@@ -4306,15 +4444,9 @@ class Eventable {
 
     const event = /** @type {AugmentedEvent<T>} */ (new PhotoSwipeEvent(name, details));
 
-    if (!this._listeners) {
-      return event;
-    }
-
-    if (this._listeners[name]) {
-      this._listeners[name].forEach((listener) => {
-        listener.call(this, event);
-      });
-    }
+    this._listeners[name]?.forEach((listener) => {
+      listener.call(this, event);
+    });
 
     return event;
   }
@@ -4328,20 +4460,19 @@ class Placeholder {
   constructor(imageSrc, container) {
     // Create placeholder
     // (stretched thumbnail or simple div behind the main image)
+    /** @type {HTMLImageElement | HTMLDivElement | null} */
     this.element = createElement(
       'pswp__img pswp__img--placeholder',
-      imageSrc ? 'img' : '',
+      imageSrc ? 'img' : 'div',
       container
     );
 
     if (imageSrc) {
-      /** @type {HTMLImageElement} */
-      (this.element).decoding = 'async';
-      /** @type {HTMLImageElement} */
-      (this.element).alt = '';
-      /** @type {HTMLImageElement} */
-      (this.element).src = imageSrc;
-      this.element.setAttribute('role', 'presentation');
+      const imgEl = /** @type {HTMLImageElement} */ (this.element);
+      imgEl.decoding = 'async';
+      imgEl.alt = '';
+      imgEl.src = imageSrc;
+      imgEl.setAttribute('role', 'presentation');
     }
 
     this.element.setAttribute('aria-hidden', 'true');
@@ -4369,7 +4500,7 @@ class Placeholder {
   }
 
   destroy() {
-    if (this.element.parentNode) {
+    if (this.element?.parentNode) {
       this.element.remove();
     }
     this.element = null;
@@ -4378,13 +4509,13 @@ class Placeholder {
 
 /** @typedef {import('./slide.js').default} Slide */
 /** @typedef {import('./slide.js').SlideData} SlideData */
-/** @typedef {import('../photoswipe.js').default} PhotoSwipe */
+/** @typedef {import('../core/base.js').default} PhotoSwipeBase */
 /** @typedef {import('../util/util.js').LoadState} LoadState */
 
 class Content {
   /**
    * @param {SlideData} itemData Slide data
-   * @param {PhotoSwipe} instance PhotoSwipe or PhotoSwipeLightbox instance
+   * @param {PhotoSwipeBase} instance PhotoSwipe or PhotoSwipeLightbox instance
    * @param {number} index
    */
   constructor(itemData, instance, index) {
@@ -4392,8 +4523,12 @@ class Content {
     this.data = itemData;
     this.index = index;
 
-    /** @type {HTMLImageElement | HTMLDivElement} */
+    /** @type {HTMLImageElement | HTMLDivElement | undefined} */
     this.element = undefined;
+    /** @type {Placeholder | undefined} */
+    this.placeholder = undefined;
+    /** @type {Slide | undefined} */
+    this.slide = undefined;
 
     this.displayedImageWidth = 0;
     this.displayedImageHeight = 0;
@@ -4403,6 +4538,7 @@ class Content {
 
     this.isAttached = false;
     this.hasSlide = false;
+    this.isDecoding = false;
     /** @type {LoadState} */
     this.state = LOAD_STATE.IDLE;
 
@@ -4423,7 +4559,7 @@ class Content {
       setTimeout(() => {
         if (this.placeholder) {
           this.placeholder.destroy();
-          this.placeholder = null;
+          this.placeholder = undefined;
         }
       }, 1000);
     }
@@ -4432,8 +4568,8 @@ class Content {
   /**
    * Preload content
    *
-   * @param {boolean=} isLazy
-   * @param {boolean=} reload
+   * @param {boolean} isLazy
+   * @param {boolean} [reload]
    */
   load(isLazy, reload) {
     if (this.slide && this.usePlaceholder()) {
@@ -4474,7 +4610,7 @@ class Content {
         this.loadImage(isLazy);
       }
     } else {
-      this.element = createElement('pswp__content');
+      this.element = createElement('pswp__content', 'div');
       this.element.innerHTML = this.data.html || '';
     }
 
@@ -4489,11 +4625,13 @@ class Content {
    * @param {boolean} isLazy
    */
   loadImage(isLazy) {
-    const imageElement = /** @type HTMLImageElement */ (this.element);
-
-    if (this.instance.dispatch('contentLoadImage', { content: this, isLazy }).defaultPrevented) {
+    if (!this.isImageContent()
+      || !this.element
+      || this.instance.dispatch('contentLoadImage', { content: this, isLazy }).defaultPrevented) {
       return;
     }
+
+    const imageElement = /** @type HTMLImageElement */ (this.element);
 
     this.updateSrcsetSizes();
 
@@ -4501,9 +4639,8 @@ class Content {
       imageElement.srcset = this.data.srcset;
     }
 
-    imageElement.src = this.data.src;
-
-    imageElement.alt = this.data.alt || '';
+    imageElement.src = this.data.src ?? '';
+    imageElement.alt = this.data.alt ?? '';
 
     this.state = LOAD_STATE.LOADING;
 
@@ -4539,7 +4676,7 @@ class Content {
   onLoaded() {
     this.state = LOAD_STATE.LOADED;
 
-    if (this.slide) {
+    if (this.slide && this.element) {
       this.instance.dispatch('loadComplete', { slide: this.slide, content: this });
 
       // if content is reloaded
@@ -4580,6 +4717,9 @@ class Content {
     );
   }
 
+  /**
+   * @returns {Boolean} If the content is in error state
+   */
   isError() {
     return this.state === LOAD_STATE.ERROR;
   }
@@ -4606,8 +4746,10 @@ class Content {
       this.placeholder.setDisplayedSize(width, height);
     }
 
-    // eslint-disable-next-line max-len
-    if (this.instance.dispatch('contentResize', { content: this, width, height }).defaultPrevented) {
+    if (this.instance.dispatch(
+      'contentResize',
+      { content: this, width, height }).defaultPrevented
+    ) {
       return;
     }
 
@@ -4626,8 +4768,10 @@ class Content {
       }
 
       if (this.slide) {
-        // eslint-disable-next-line max-len
-        this.instance.dispatch('imageSizeChange', { slide: this.slide, width, height, content: this });
+        this.instance.dispatch(
+          'imageSizeChange',
+          { slide: this.slide, width, height, content: this }
+        );
       }
     }
   }
@@ -4652,24 +4796,23 @@ class Content {
     // Never lower quality, if it was increased previously.
     // Chrome does this automatically, Firefox and Safari do not,
     // so we store largest used size in dataset.
-    // Handle srcset sizes attribute.
-    //
-    // Never lower quality, if it was increased previously.
-    // Chrome does this automatically, Firefox and Safari do not,
-    // so we store largest used size in dataset.
-    if (this.data.srcset) {
-      const image = /** @type HTMLImageElement */ (this.element);
-      const sizesWidth = this.instance.applyFilters(
-        'srcsetSizesWidth',
-        this.displayedImageWidth,
-        this
-      );
+    if (!this.isImageContent() || !this.element || !this.data.srcset) {
+      return;
+    }
 
-      if (!image.dataset.largestUsedSize
-          || sizesWidth > parseInt(image.dataset.largestUsedSize, 10)) {
-        image.sizes = sizesWidth + 'px';
-        image.dataset.largestUsedSize = String(sizesWidth);
-      }
+    const image = /** @type HTMLImageElement */ (this.element);
+    const sizesWidth = this.instance.applyFilters(
+      'srcsetSizesWidth',
+      this.displayedImageWidth,
+      this
+    );
+
+    if (
+      !image.dataset.largestUsedSize
+      || sizesWidth > parseInt(image.dataset.largestUsedSize, 10)
+    ) {
+      image.sizes = sizesWidth + 'px';
+      image.dataset.largestUsedSize = String(sizesWidth);
     }
   }
 
@@ -4711,7 +4854,7 @@ class Content {
    */
   destroy() {
     this.hasSlide = false;
-    this.slide = null;
+    this.slide = undefined;
 
     if (this.instance.dispatch('contentDestroy', { content: this }).defaultPrevented) {
       return;
@@ -4721,13 +4864,13 @@ class Content {
 
     if (this.placeholder) {
       this.placeholder.destroy();
-      this.placeholder = null;
+      this.placeholder = undefined;
     }
 
     if (this.isImageContent() && this.element) {
       this.element.onload = null;
       this.element.onerror = null;
-      this.element = null;
+      this.element = undefined;
     }
   }
 
@@ -4736,15 +4879,14 @@ class Content {
    */
   displayError() {
     if (this.slide) {
-      /** @type {HTMLElement} */
-      let errorMsgEl = createElement('pswp__error-msg');
+      let errorMsgEl = createElement('pswp__error-msg', 'div');
       errorMsgEl.innerText = this.instance.options.errorMsg;
-      errorMsgEl = this.instance.applyFilters(
+      errorMsgEl = /** @type {HTMLDivElement} */ (this.instance.applyFilters(
         'contentErrorElement',
         errorMsgEl,
         this
-      );
-      this.element = createElement('pswp__content pswp__error-msg-container');
+      ));
+      this.element = createElement('pswp__content pswp__error-msg-container', 'div');
       this.element.appendChild(errorMsgEl);
       this.slide.container.innerText = '';
       this.slide.container.appendChild(this.element);
@@ -4757,7 +4899,7 @@ class Content {
    * Append the content
    */
   append() {
-    if (this.isAttached) {
+    if (this.isAttached || !this.element) {
       return;
     }
 
@@ -4799,7 +4941,7 @@ class Content {
       } else {
         this.appendImage();
       }
-    } else if (this.element && !this.element.parentNode) {
+    } else if (this.slide && !this.element.parentNode) {
       this.slide.container.appendChild(this.element);
     }
   }
@@ -4810,22 +4952,21 @@ class Content {
    * meaning the user can see it.
    */
   activate() {
-    if (this.instance.dispatch('contentActivate', { content: this }).defaultPrevented) {
+    if (this.instance.dispatch('contentActivate', { content: this }).defaultPrevented
+      || !this.slide) {
       return;
     }
 
-    if (this.slide) {
-      if (this.isImageContent() && this.isDecoding && !isSafari()) {
-        // add image to slide when it becomes active,
-        // even if it's not finished decoding
-        this.appendImage();
-      } else if (this.isError()) {
-        this.load(false, true); // try to reload
-      }
+    if (this.isImageContent() && this.isDecoding && !isSafari()) {
+      // add image to slide when it becomes active,
+      // even if it's not finished decoding
+      this.appendImage();
+    } else if (this.isError()) {
+      this.load(false, true); // try to reload
+    }
 
-      if (this.slide.holderElement) {
-        this.slide.holderElement.setAttribute('aria-hidden', 'false');
-      }
+    if (this.slide.holderElement) {
+      this.slide.holderElement.setAttribute('aria-hidden', 'false');
     }
   }
 
@@ -4887,7 +5028,6 @@ class Content {
 /** @typedef {import('./slide.js').SlideData} SlideData */
 /** @typedef {import('../core/base.js').default} PhotoSwipeBase */
 /** @typedef {import('../photoswipe.js').default} PhotoSwipe */
-/** @typedef {import('../lightbox/lightbox.js').default} PhotoSwipeLightbox */
 
 const MIN_SLIDES_TO_CACHE = 5;
 
@@ -4897,28 +5037,23 @@ const MIN_SLIDES_TO_CACHE = 5;
  * thus it can be called before dialog is opened.
  *
  * @param {SlideData} itemData Data about the slide
- * @param {PhotoSwipe | PhotoSwipeLightbox | PhotoSwipeBase} instance PhotoSwipe instance
+ * @param {PhotoSwipeBase} instance PhotoSwipe or PhotoSwipeLightbox instance
  * @param {number} index
- * @returns Image that is being decoded or false.
+ * @returns {Content} Image that is being decoded or false.
  */
 function lazyLoadData(itemData, instance, index) {
-  // src/slide/content/content.js
   const content = instance.createContentFromData(itemData, index);
-
-  if (!content || !content.lazyLoad) {
-    return;
-  }
 
   const { options } = instance;
 
   // We need to know dimensions of the image to preload it,
-  // as it might use srcset and we need to define sizes
-  // @ts-expect-error should provide pswp instance?
-  const viewportSize = instance.viewportSize || getViewportSize(options, instance);
-  const panAreaSize = getPanAreaSize(options, viewportSize, itemData, index);
-
+  // as it might use srcset, and we need to define sizes
   const zoomLevel = new ZoomLevel(options, itemData, -1);
-  zoomLevel.update(content.width, content.height, panAreaSize);
+  if (instance.pswp) {
+    const viewportSize = instance.pswp.viewportSize || getViewportSize(options, instance.pswp);
+    const panAreaSize = getPanAreaSize(options, viewportSize, itemData, index);
+    zoomLevel.update(content.width, content.height, panAreaSize);
+  }
 
   content.lazyLoad();
   content.setDisplayedSize(
@@ -4935,10 +5070,11 @@ function lazyLoadData(itemData, instance, index) {
  * This function is used both by Lightbox and PhotoSwipe core,
  * thus it can be called before dialog is opened.
  *
- * By default it loads image based on viewport size and initial zoom level.
+ * By default, it loads image based on viewport size and initial zoom level.
  *
  * @param {number} index Slide index
- * @param {PhotoSwipe | PhotoSwipeLightbox} instance PhotoSwipe or PhotoSwipeLightbox eventable instance
+ * @param {PhotoSwipeBase} instance PhotoSwipe or PhotoSwipeLightbox eventable instance
+ * @returns {Content | undefined}
  */
 function lazyLoadSlide(index, instance) {
   const itemData = instance.getItemData(index);
@@ -4949,7 +5085,6 @@ function lazyLoadSlide(index, instance) {
 
   return lazyLoadData(itemData, instance, index);
 }
-
 
 class ContentLoader {
   /**
@@ -4969,7 +5104,7 @@ class ContentLoader {
   /**
    * Lazy load nearby slides based on `preload` option.
    *
-   * @param {number=} diff Difference between slide indexes that was changed recently, or 0.
+   * @param {number} [diff] Difference between slide indexes that was changed recently, or 0.
    */
   updateLazy(diff) {
     const { pswp } = this;
@@ -4994,10 +5129,10 @@ class ContentLoader {
   }
 
   /**
-   * @param {number} index
+   * @param {number} initialIndex
    */
-  loadSlideByIndex(index) {
-    index = this.pswp.getLoopedIndex(index);
+  loadSlideByIndex(initialIndex) {
+    const index = this.pswp.getLoopedIndex(initialIndex);
     // try to get cached content
     let content = this.getContentByIndex(index);
     if (!content) {
@@ -5012,21 +5147,19 @@ class ContentLoader {
 
   /**
    * @param {Slide} slide
+   * @returns {Content}
    */
   getContentBySlide(slide) {
     let content = this.getContentByIndex(slide.index);
     if (!content) {
       // create content if not found in cache
       content = this.pswp.createContentFromData(slide.data, slide.index);
-      if (content) {
-        this.addToCache(content);
-      }
+      this.addToCache(content);
     }
 
-    if (content) {
-      // assign slide to content
-      content.setSlide(slide);
-    }
+    // assign slide to content
+    content.setSlide(slide);
+
     return content;
   }
 
@@ -5064,6 +5197,7 @@ class ContentLoader {
 
   /**
    * @param {number} index
+   * @returns {Content | undefined}
    */
   getContentByIndex(index) {
     return this._cachedItems.find(content => content.index === index);
@@ -5071,12 +5205,13 @@ class ContentLoader {
 
   destroy() {
     this._cachedItems.forEach(content => content.destroy());
-    this._cachedItems = null;
+    this._cachedItems = [];
   }
 }
 
 /** @typedef {import("../photoswipe.js").default} PhotoSwipe */
 /** @typedef {import("../photoswipe.js").PhotoSwipeOptions} PhotoSwipeOptions */
+/** @typedef {import("../photoswipe.js").PreparedPhotoSwipeOptions} PreparedPhotoSwipeOptions */
 /** @typedef {import("../slide/slide.js").SlideData} SlideData */
 
 /**
@@ -5090,11 +5225,12 @@ class PhotoSwipeBase extends Eventable {
    * @returns {number}
    */
   getNumItems() {
-    let numItems;
-    const { dataSource } = this.options;
+    let numItems = 0;
+    let { dataSource } = this.options;
     if (!dataSource) {
-      numItems = 0;
-    } else if ('length' in dataSource) {
+      dataSource = [];
+    }
+    if ('length' in dataSource) {
       // may be an array or just object with length property
       numItems = dataSource.length;
     } else if ('gallery' in dataSource) {
@@ -5119,9 +5255,9 @@ class PhotoSwipeBase extends Eventable {
   /**
    * @param {SlideData} slideData
    * @param {number} index
+   * @returns {Content}
    */
   createContentFromData(slideData, index) {
-    // @ts-expect-error
     return new Content(slideData, this, index);
   }
 
@@ -5133,14 +5269,16 @@ class PhotoSwipeBase extends Eventable {
    * `src`, `srcset`, `w`, `h`, which will be used to generate a slide with image.
    *
    * @param {number} index
+   * @returns {SlideData}
    */
   getItemData(index) {
     const { dataSource } = this.options;
-    let dataSourceItem;
+    /** @type {SlideData | HTMLElement} */
+    let dataSourceItem = {};
     if (Array.isArray(dataSource)) {
       // Datasource is an array of elements
       dataSourceItem = dataSource[index];
-    } else if (dataSource && dataSource.gallery) {
+    } else if (dataSource && 'gallery' in dataSource) {
       // dataSource has gallery property,
       // thus it was created by Lightbox, based on
       // gallery and children options
@@ -5174,6 +5312,7 @@ class PhotoSwipeBase extends Eventable {
    * based on childSelector and gallery element.
    *
    * @param {HTMLElement} galleryElement
+   * @returns {HTMLElement[]}
    */
   _getGalleryDOMElements(galleryElement) {
     if (this.options.children || this.options.childSelector) {
@@ -5191,16 +5330,19 @@ class PhotoSwipeBase extends Eventable {
    * Converts DOM element to item data object.
    *
    * @param {HTMLElement} element DOM element
+   * @returns {SlideData}
    */
-  // eslint-disable-next-line class-methods-use-this
   _domElementToItemData(element) {
     /** @type {SlideData} */
     const itemData = {
       element
     };
 
-    // eslint-disable-next-line max-len
-    const linkEl = /** @type {HTMLAnchorElement} */ (element.tagName === 'A' ? element : element.querySelector('a'));
+    const linkEl = /** @type {HTMLAnchorElement} */ (
+      element.tagName === 'A'
+        ? element
+        : element.querySelector('a')
+    );
 
     if (linkEl) {
       // src comes from data-pswp-src attribute,
@@ -5211,8 +5353,8 @@ class PhotoSwipeBase extends Eventable {
         itemData.srcset = linkEl.dataset.pswpSrcset;
       }
 
-      itemData.width = parseInt(linkEl.dataset.pswpWidth, 10);
-      itemData.height = parseInt(linkEl.dataset.pswpHeight, 10);
+      itemData.width = linkEl.dataset.pswpWidth ? parseInt(linkEl.dataset.pswpWidth, 10) : 0;
+      itemData.height = linkEl.dataset.pswpHeight ? parseInt(linkEl.dataset.pswpHeight, 10) : 0;
 
       // support legacy w & h properties
       itemData.w = itemData.width;
@@ -5228,7 +5370,7 @@ class PhotoSwipeBase extends Eventable {
         // msrc is URL to placeholder image that's displayed before large image is loaded
         // by default it's displayed only for the first slide
         itemData.msrc = thumbnailEl.currentSrc || thumbnailEl.src;
-        itemData.alt = thumbnailEl.getAttribute('alt');
+        itemData.alt = thumbnailEl.getAttribute('alt') ?? '';
       }
 
       if (linkEl.dataset.pswpCropped || linkEl.dataset.cropped) {
@@ -5244,10 +5386,28 @@ class PhotoSwipeBase extends Eventable {
    *
    * @param {SlideData} itemData Data about the slide
    * @param {number} index
-   * @returns Image that is being decoded or false.
+   * @returns {Content} Image that is being decoded or false.
    */
   lazyLoadData(itemData, index) {
     return lazyLoadData(itemData, this, index);
+  }
+
+  /**
+   * @protected
+   * @param {PhotoSwipeOptions} options
+   * @returns {PreparedPhotoSwipeOptions}
+   */
+  _prepareOptions(options) {
+    if (window.matchMedia('(prefers-reduced-motion), (update: slow)').matches) {
+      options.showHideAnimationType = 'none';
+      options.zoomAnimationDuration = 0;
+    }
+
+    /** @type {PreparedPhotoSwipeOptions} */
+    return {
+      ...defaultOptions,
+      ...options
+    };
   }
 }
 
@@ -5273,10 +5433,51 @@ class Opener {
   constructor(pswp) {
     this.pswp = pswp;
     this.isClosed = true;
-    this._prepareOpen = this._prepareOpen.bind(this);
+    this.isOpen = false;
+    this.isClosing = false;
+    this.isOpening = false;
+    /**
+     * @private
+     * @type {number | false | undefined}
+     */
+    this._duration = undefined;
+    /** @private */
+    this._useAnimation = false;
+    /** @private */
+    this._croppedZoom = false;
+    /** @private */
+    this._animateRootOpacity = false;
+    /** @private */
+    this._animateBgOpacity = false;
+    /**
+     * @private
+     * @type { HTMLDivElement | HTMLImageElement | null | undefined }
+     */
+    this._placeholder = undefined;
+    /**
+     * @private
+     * @type { HTMLDivElement | undefined }
+     */
+    this._opacityElement = undefined;
+    /**
+     * @private
+     * @type { HTMLDivElement | undefined }
+     */
+    this._cropContainer1 = undefined;
+    /**
+     * @private
+     * @type { HTMLElement | null | undefined }
+     */
+    this._cropContainer2 = undefined;
 
-    /** @type {false | Bounds} */
-    this._thumbBounds = undefined;
+    /**
+     * @private
+     * @type {Bounds | null}
+     */
+    this._thumbBounds = null;
+
+
+    this._prepareOpen = this._prepareOpen.bind(this);
 
     // Override initial zoom and pan position
     pswp.on('firstZoomPan', this._prepareOpen);
@@ -5292,7 +5493,7 @@ class Opener {
       // if we close during opening animation
       // for now do nothing,
       // browsers aren't good at changing the direction of the CSS transition
-      return false;
+      return;
     }
 
     const slide = this.pswp.currSlide;
@@ -5310,10 +5511,9 @@ class Opener {
     setTimeout(() => {
       this._start();
     }, this._croppedZoom ? 30 : 0);
-
-    return true;
   }
 
+  /** @private */
   _prepareOpen() {
     this.pswp.off('firstZoomPan', this._prepareOpen);
     if (!this.isOpening) {
@@ -5328,6 +5528,7 @@ class Opener {
     }
   }
 
+  /** @private */
   _applyStartProps() {
     const { pswp } = this;
     const slide = this.pswp.currSlide;
@@ -5335,11 +5536,11 @@ class Opener {
 
     if (options.showHideAnimationType === 'fade') {
       options.showHideOpacity = true;
-      this._thumbBounds = false;
+      this._thumbBounds = null;
     } else if (options.showHideAnimationType === 'none') {
       options.showHideOpacity = false;
       this._duration = 0;
-      this._thumbBounds = false;
+      this._thumbBounds = null;
     } else if (this.isOpening && pswp._initialThumbBounds) {
       // Use initial bounds if defined
       this._thumbBounds = pswp._initialThumbBounds;
@@ -5347,24 +5548,24 @@ class Opener {
       this._thumbBounds = this.pswp.getThumbBounds();
     }
 
-    this._placeholder = slide.getPlaceholderElement();
+    this._placeholder = slide?.getPlaceholderElement();
 
     pswp.animations.stopAll();
 
     // Discard animations when duration is less than 50ms
-    this._useAnimation = (this._duration > 50);
+    this._useAnimation = Boolean(this._duration && this._duration > 50);
     this._animateZoom = Boolean(this._thumbBounds)
-                        && (slide.content && slide.content.usePlaceholder())
+                        && slide?.content.usePlaceholder()
                         && (!this.isClosing || !pswp.mainScroll.isShifted());
     if (!this._animateZoom) {
       this._animateRootOpacity = true;
 
-      if (this.isOpening) {
+      if (this.isOpening && slide) {
         slide.zoomAndPanToInitial();
         slide.applyCurrentZoomPan();
       }
     } else {
-      this._animateRootOpacity = options.showHideOpacity;
+      this._animateRootOpacity = options.showHideOpacity ?? false;
     }
     this._animateBgOpacity = !this._animateRootOpacity && this.pswp.options.bgOpacity > MIN_OPACITY;
     this._opacityElement = this._animateRootOpacity ? pswp.element : pswp.bg;
@@ -5375,7 +5576,9 @@ class Opener {
       this._animateBgOpacity = false;
       this._animateRootOpacity = true;
       if (this.isOpening) {
-        pswp.element.style.opacity = String(MIN_OPACITY);
+        if (pswp.element) {
+          pswp.element.style.opacity = String(MIN_OPACITY);
+        }
         pswp.applyBgOpacity(1);
       }
       return;
@@ -5385,10 +5588,12 @@ class Opener {
       // Properties are used when animation from cropped thumbnail
       this._croppedZoom = true;
       this._cropContainer1 = this.pswp.container;
-      this._cropContainer2 = this.pswp.currSlide.holderElement;
+      this._cropContainer2 = this.pswp.currSlide?.holderElement;
 
-      pswp.container.style.overflow = 'hidden';
-      pswp.container.style.width = pswp.viewportSize.x + 'px';
+      if (pswp.container) {
+        pswp.container.style.overflow = 'hidden';
+        pswp.container.style.width = pswp.viewportSize.x + 'px';
+      }
     } else {
       this._croppedZoom = false;
     }
@@ -5396,13 +5601,17 @@ class Opener {
     if (this.isOpening) {
       // Apply styles before opening transition
       if (this._animateRootOpacity) {
-        pswp.element.style.opacity = String(MIN_OPACITY);
+        if (pswp.element) {
+          pswp.element.style.opacity = String(MIN_OPACITY);
+        }
         pswp.applyBgOpacity(1);
       } else {
-        if (this._animateBgOpacity) {
+        if (this._animateBgOpacity && pswp.bg) {
           pswp.bg.style.opacity = String(MIN_OPACITY);
         }
-        pswp.element.style.opacity = '1';
+        if (pswp.element) {
+          pswp.element.style.opacity = '1';
+        }
       }
 
       if (this._animateZoom) {
@@ -5419,8 +5628,12 @@ class Opener {
     } else if (this.isClosing) {
       // hide nearby slides to make sure that
       // they are not painted during the transition
-      pswp.mainScroll.itemHolders[0].el.style.display = 'none';
-      pswp.mainScroll.itemHolders[2].el.style.display = 'none';
+      if (pswp.mainScroll.itemHolders[0]) {
+        pswp.mainScroll.itemHolders[0].el.style.display = 'none';
+      }
+      if (pswp.mainScroll.itemHolders[2]) {
+        pswp.mainScroll.itemHolders[2].el.style.display = 'none';
+      }
 
       if (this._croppedZoom) {
         if (pswp.mainScroll.x !== 0) {
@@ -5432,6 +5645,7 @@ class Opener {
     }
   }
 
+  /** @private */
   _start() {
     if (this.isOpening
         && this._useAnimation
@@ -5449,13 +5663,13 @@ class Opener {
         decodeImage(/** @type {HTMLImageElement} */ (this._placeholder)).finally(() => {
           decoded = true;
           if (!isDelaying) {
-            resolve();
+            resolve(true);
           }
         });
         setTimeout(() => {
           isDelaying = false;
           if (decoded) {
-            resolve();
+            resolve(true);
           }
         }, 50);
         setTimeout(resolve, 250);
@@ -5465,8 +5679,9 @@ class Opener {
     }
   }
 
+  /** @private */
   _initiate() {
-    this.pswp.element.style.setProperty('--pswp-transition-duration', this._duration + 'ms');
+    this.pswp.element?.style.setProperty('--pswp-transition-duration', this._duration + 'ms');
 
     this.pswp.dispatch(
       this.isOpening ? 'openingAnimationStart' : 'closingAnimationStart'
@@ -5478,7 +5693,7 @@ class Opener {
       ('initialZoom' + (this.isOpening ? 'In' : 'Out'))
     );
 
-    this.pswp.element.classList[this.isOpening ? 'add' : 'remove']('pswp--ui-visible');
+    this.pswp.element?.classList[this.isOpening ? 'add' : 'remove']('pswp--ui-visible');
 
     if (this.isOpening) {
       if (this._placeholder) {
@@ -5495,6 +5710,7 @@ class Opener {
     }
   }
 
+  /** @private */
   _onAnimationComplete() {
     const { pswp } = this;
     this.isOpen = this.isOpening;
@@ -5515,39 +5731,43 @@ class Opener {
     if (this.isClosed) {
       pswp.destroy();
     } else if (this.isOpen) {
-      if (this._animateZoom) {
+      if (this._animateZoom && pswp.container) {
         pswp.container.style.overflow = 'visible';
         pswp.container.style.width = '100%';
       }
-      pswp.currSlide.applyCurrentZoomPan();
+      pswp.currSlide?.applyCurrentZoomPan();
     }
   }
 
+  /** @private */
   _animateToOpenState() {
     const { pswp } = this;
     if (this._animateZoom) {
-      if (this._croppedZoom) {
+      if (this._croppedZoom && this._cropContainer1 && this._cropContainer2) {
         this._animateTo(this._cropContainer1, 'transform', 'translate3d(0,0,0)');
         this._animateTo(this._cropContainer2, 'transform', 'none');
       }
 
-      pswp.currSlide.zoomAndPanToInitial();
-      this._animateTo(
-        pswp.currSlide.container,
-        'transform',
-        pswp.currSlide.getCurrentTransform()
-      );
+      if (pswp.currSlide) {
+        pswp.currSlide.zoomAndPanToInitial();
+        this._animateTo(
+          pswp.currSlide.container,
+          'transform',
+          pswp.currSlide.getCurrentTransform()
+        );
+      }
     }
 
-    if (this._animateBgOpacity) {
+    if (this._animateBgOpacity && pswp.bg) {
       this._animateTo(pswp.bg, 'opacity', String(pswp.options.bgOpacity));
     }
 
-    if (this._animateRootOpacity) {
+    if (this._animateRootOpacity && pswp.element) {
       this._animateTo(pswp.element, 'opacity', '1');
     }
   }
 
+  /** @private */
   _animateToClosedState() {
     const { pswp } = this;
 
@@ -5555,18 +5775,19 @@ class Opener {
       this._setClosedStateZoomPan(true);
     }
 
-    if (this._animateBgOpacity
-        && pswp.bgOpacity > 0.01) { // do not animate opacity if it's already at 0
+    // do not animate opacity if it's already at 0
+    if (this._animateBgOpacity && pswp.bgOpacity > 0.01 && pswp.bg) {
       this._animateTo(pswp.bg, 'opacity', '0');
     }
 
-    if (this._animateRootOpacity) {
+    if (this._animateRootOpacity && pswp.element) {
       this._animateTo(pswp.element, 'opacity', '0');
     }
   }
 
   /**
-   * @param {boolean=} animate
+   * @private
+   * @param {boolean} [animate]
    */
   _setClosedStateZoomPan(animate) {
     if (!this._thumbBounds) return;
@@ -5575,7 +5796,7 @@ class Opener {
     const { innerRect } = this._thumbBounds;
     const { currSlide, viewportSize } = pswp;
 
-    if (this._croppedZoom) {
+    if (this._croppedZoom && innerRect && this._cropContainer1 && this._cropContainer2) {
       const containerOnePanX = -viewportSize.x + (this._thumbBounds.x - innerRect.x) + innerRect.w;
       const containerOnePanY = -viewportSize.y + (this._thumbBounds.y - innerRect.y) + innerRect.h;
       const containerTwoPanX = viewportSize.x - innerRect.w;
@@ -5600,17 +5821,19 @@ class Opener {
       }
     }
 
-    equalizePoints(currSlide.pan, innerRect || this._thumbBounds);
-    currSlide.currZoomLevel = this._thumbBounds.w / currSlide.width;
-
-    if (animate) {
-      this._animateTo(currSlide.container, 'transform', currSlide.getCurrentTransform());
-    } else {
-      currSlide.applyCurrentZoomPan();
+    if (currSlide) {
+      currSlide.pan = equalizePoints(currSlide.pan, innerRect || this._thumbBounds);
+      currSlide.currZoomLevel = this._thumbBounds.w / currSlide.width;
+      if (animate) {
+        this._animateTo(currSlide.container, 'transform', currSlide.getCurrentTransform());
+      } else {
+        currSlide.applyCurrentZoomPan();
+      }
     }
   }
 
   /**
+   * @private
    * @param {HTMLElement} target
    * @param {'transform' | 'opacity'} prop
    * @param {string} propValue
@@ -5649,6 +5872,7 @@ class Opener {
 /** @typedef {import('./main-scroll.js').ItemHolder} ItemHolder */
 /** @typedef {import('./core/eventable.js').PhotoSwipeEventsMap} PhotoSwipeEventsMap */
 /** @typedef {import('./core/eventable.js').PhotoSwipeFiltersMap} PhotoSwipeFiltersMap */
+/** @typedef {import('./slide/get-thumb-bounds').Bounds} Bounds */
 /**
  * @template T
  * @typedef {import('./core/eventable.js').EventCallback<T>} EventCallback<T>
@@ -5658,8 +5882,7 @@ class Opener {
  * @typedef {import('./core/eventable.js').AugmentedEvent<T>} AugmentedEvent<T>
  */
 
-/** @typedef {{ x?: number; y?: number; id?: string | number }} Point */
-/** @typedef {{ x?: number; y?: number }} Size */
+/** @typedef {{ x: number; y: number; id?: string | number }} Point */
 /** @typedef {{ top: number; bottom: number; left: number; right: number }} Padding */
 /** @typedef {SlideData[]} DataSourceArray */
 /** @typedef {{ gallery: HTMLElement; items?: HTMLElement[] }} DataSourceObject */
@@ -5673,10 +5896,11 @@ class Opener {
  * @typedef {string | NodeListOf<HTMLElement> | HTMLElement[] | HTMLElement} ElementProvider
  */
 
+/** @typedef {Partial<PreparedPhotoSwipeOptions>} PhotoSwipeOptions https://photoswipe.com/options/ */
 /**
- * @typedef {Object} PhotoSwipeOptions https://photoswipe.com/options/
+ * @typedef {Object} PreparedPhotoSwipeOptions
  *
- * @prop {DataSource=} dataSource
+ * @prop {DataSource} [dataSource]
  * Pass an array of any items via dataSource option. Its length will determine amount of slides
  * (which may be modified further from numItems event).
  *
@@ -5685,109 +5909,109 @@ class Opener {
  *
  * If these properties are not present in your initial array, you may "pre-parse" each item from itemData filter.
  *
- * @prop {number=} bgOpacity
+ * @prop {number} bgOpacity
  * Background backdrop opacity, always define it via this option and not via CSS rgba color.
  *
- * @prop {number=} spacing
+ * @prop {number} spacing
  * Spacing between slides. Defined as ratio relative to the viewport width (0.1 = 10% of viewport).
  *
- * @prop {boolean=} allowPanToNext
+ * @prop {boolean} allowPanToNext
  * Allow swipe navigation to the next slide when the current slide is zoomed. Does not apply to mouse events.
  *
- * @prop {boolean=} loop
+ * @prop {boolean} loop
  * If set to true you'll be able to swipe from the last to the first image.
  * Option is always false when there are less than 3 slides.
  *
- * @prop {boolean=} wheelToZoom
+ * @prop {boolean} [wheelToZoom]
  * By default PhotoSwipe zooms image with ctrl-wheel, if you enable this option - image will zoom just via wheel.
  *
- * @prop {boolean=} pinchToClose
+ * @prop {boolean} pinchToClose
  * Pinch touch gesture to close the gallery.
  *
- * @prop {boolean=} closeOnVerticalDrag
+ * @prop {boolean} closeOnVerticalDrag
  * Vertical drag gesture to close the PhotoSwipe.
  *
- * @prop {Padding=} padding
+ * @prop {Padding} [padding]
  * Slide area padding (in pixels).
  *
- * @prop {(viewportSize: Size, itemData: SlideData, index: number) => Padding} [paddingFn]
+ * @prop {(viewportSize: Point, itemData: SlideData, index: number) => Padding} [paddingFn]
  * The option is checked frequently, so make sure it's performant. Overrides padding option if defined. For example:
  *
- * @prop {number | false} [hideAnimationDuration]
+ * @prop {number | false} hideAnimationDuration
  * Transition duration in milliseconds, can be 0.
  *
- * @prop {number | false} [showAnimationDuration]
+ * @prop {number | false} showAnimationDuration
  * Transition duration in milliseconds, can be 0.
  *
- * @prop {number | false} [zoomAnimationDuration]
+ * @prop {number | false} zoomAnimationDuration
  * Transition duration in milliseconds, can be 0.
  *
- * @prop {string=} easing
+ * @prop {string} easing
  * String, 'cubic-bezier(.4,0,.22,1)'. CSS easing function for open/close/zoom transitions.
  *
- * @prop {boolean=} escKey
+ * @prop {boolean} escKey
  * Esc key to close.
  *
- * @prop {boolean=} arrowKeys
+ * @prop {boolean} arrowKeys
  * Left/right arrow keys for navigation.
  *
- * @prop {boolean=} returnFocus
+ * @prop {boolean} returnFocus
  * Restore focus the last active element after PhotoSwipe is closed.
  *
- * @prop {boolean=} clickToCloseNonZoomable
+ * @prop {boolean} clickToCloseNonZoomable
  * If image is not zoomable (for example, smaller than viewport) it can be closed by clicking on it.
  *
- * @prop {ActionType | ActionFn | false} [imageClickAction]
+ * @prop {ActionType | ActionFn | false} imageClickAction
  * Refer to click and tap actions page.
  *
- * @prop {ActionType | ActionFn | false} [bgClickAction]
+ * @prop {ActionType | ActionFn | false} bgClickAction
  * Refer to click and tap actions page.
  *
- * @prop {ActionType | ActionFn | false} [tapAction]
+ * @prop {ActionType | ActionFn | false} tapAction
  * Refer to click and tap actions page.
  *
- * @prop {ActionType | ActionFn | false} [doubleTapAction]
+ * @prop {ActionType | ActionFn | false} doubleTapAction
  * Refer to click and tap actions page.
  *
- * @prop {number=} preloaderDelay
+ * @prop {number} preloaderDelay
  * Delay before the loading indicator will be displayed,
  * if image is loaded during it - the indicator will not be displayed at all. Can be zero.
  *
- * @prop {string=} indexIndicatorSep
+ * @prop {string} indexIndicatorSep
  * Used for slide count indicator ("1 of 10 ").
  *
- * @prop {(options: PhotoSwipeOptions, pswp: PhotoSwipe) => { x: number; y: number }} [getViewportSizeFn]
+ * @prop {(options: PhotoSwipeOptions, pswp: PhotoSwipe) => Point} [getViewportSizeFn]
  * A function that should return slide viewport width and height, in format {x: 100, y: 100}.
  *
- * @prop {string=} errorMsg
+ * @prop {string} errorMsg
  * Message to display when the image wasn't able to load. If you need to display HTML - use contentErrorElement filter.
  *
- * @prop {[number, number]=} preload
+ * @prop {[number, number]} preload
  * Lazy loading of nearby slides based on direction of movement. Should be an array with two integers,
  * first one - number of items to preload before the current image, second one - after the current image.
  * Two nearby images are always loaded.
  *
- * @prop {string=} mainClass
+ * @prop {string} [mainClass]
  * Class that will be added to the root element of PhotoSwipe, may contain multiple separated by space.
  * Example on Styling page.
  *
- * @prop {HTMLElement=} appendToEl
+ * @prop {HTMLElement} [appendToEl]
  * Element to which PhotoSwipe dialog will be appended when it opens.
  *
- * @prop {number=} maxWidthToAnimate
+ * @prop {number} maxWidthToAnimate
  * Maximum width of image to animate, if initial rendered image width
  * is larger than this value - the opening/closing transition will be automatically disabled.
  *
- * @prop {string=} closeTitle
+ * @prop {string} [closeTitle]
  * Translating
  *
- * @prop {string=} zoomTitle
+ * @prop {string} [zoomTitle]
  * Translating
  *
- * @prop {string=} arrowPrevTitle
+ * @prop {string} [arrowPrevTitle]
  * Translating
  *
- * @prop {string=} arrowNextTitle
+ * @prop {string} [arrowNextTitle]
  * Translating
  *
  * @prop {'zoom' | 'fade' | 'none'} [showHideAnimationType]
@@ -5796,128 +6020,120 @@ class Opener {
  *
  * Animations are automatically disabled if user `(prefers-reduced-motion: reduce)`.
  *
- * @prop {number=} index
+ * @prop {number} index
  * Defines start slide index.
  *
  * @prop {(e: MouseEvent) => number} [getClickedIndexFn]
  *
- * @prop {boolean=} arrowPrev
- * @prop {boolean=} arrowNext
- * @prop {boolean=} zoom
- * @prop {boolean=} close
- * @prop {boolean=} counter
+ * @prop {boolean} [arrowPrev]
+ * @prop {boolean} [arrowNext]
+ * @prop {boolean} [zoom]
+ * @prop {boolean} [close]
+ * @prop {boolean} [counter]
  *
- * @prop {string=} arrowPrevSVG
- * @prop {string=} arrowNextSVG
- * @prop {string=} zoomSVG
- * @prop {string=} closeSVG
- * @prop {string=} counterSVG
+ * @prop {string} [arrowPrevSVG]
+ * @prop {string} [arrowNextSVG]
+ * @prop {string} [zoomSVG]
+ * @prop {string} [closeSVG]
+ * @prop {string} [counterSVG]
  *
- * @prop {string=} arrowPrevTitle
- * @prop {string=} arrowNextTitle
- * @prop {string=} zoomTitle
- * @prop {string=} closeTitle
- * @prop {string=} counterTitle
+ * @prop {string} [arrowPrevTitle]
+ * @prop {string} [arrowNextTitle]
+ * @prop {string} [zoomTitle]
+ * @prop {string} [closeTitle]
+ * @prop {string} [counterTitle]
  *
- * @prop {ZoomLevelOption=} initialZoomLevel
- * @prop {ZoomLevelOption=} secondaryZoomLevel
- * @prop {ZoomLevelOption=} maxZoomLevel
+ * @prop {ZoomLevelOption} [initialZoomLevel]
+ * @prop {ZoomLevelOption} [secondaryZoomLevel]
+ * @prop {ZoomLevelOption} [maxZoomLevel]
  *
- * @prop {boolean=} mouseMovePan
+ * @prop {boolean} [mouseMovePan]
  * @prop {Point | null} [initialPointerPos]
- * @prop {boolean=} showHideOpacity
+ * @prop {boolean} [showHideOpacity]
  *
  * @prop {PhotoSwipeModuleOption} [pswpModule]
  * @prop {() => Promise<any>} [openPromise]
- * @prop {boolean=} preloadFirstSlide
- * @prop {ElementProvider=} gallery
- * @prop {string=} gallerySelector
- * @prop {ElementProvider=} children
- * @prop {string=} childSelector
+ * @prop {boolean} [preloadFirstSlide]
+ * @prop {ElementProvider} [gallery]
+ * @prop {string} [gallerySelector]
+ * @prop {ElementProvider} [children]
+ * @prop {string} [childSelector]
  * @prop {string | false} [thumbSelector]
  */
-
-/** @type {PhotoSwipeOptions} */
-const defaultOptions = {
-  allowPanToNext: true,
-  spacing: 0.1,
-  loop: true,
-  pinchToClose: true,
-  closeOnVerticalDrag: true,
-  hideAnimationDuration: 333,
-  showAnimationDuration: 333,
-  zoomAnimationDuration: 333,
-  escKey: true,
-  arrowKeys: true,
-  returnFocus: true,
-  maxWidthToAnimate: 4000,
-  clickToCloseNonZoomable: true,
-  imageClickAction: 'zoom-or-close',
-  bgClickAction: 'close',
-  tapAction: 'toggle-controls',
-  doubleTapAction: 'zoom',
-  indexIndicatorSep: ' / ',
-  preloaderDelay: 2000,
-  bgOpacity: 0.8,
-
-  index: 0,
-  errorMsg: 'The image cannot be loaded',
-  preload: [1, 2],
-  easing: 'cubic-bezier(.4,0,.22,1)'
-};
 
 /**
  * PhotoSwipe Core
  */
 class PhotoSwipe extends PhotoSwipeBase {
   /**
-   * @param {PhotoSwipeOptions} options
+   * @param {PhotoSwipeOptions} [options]
    */
   constructor(options) {
     super();
 
-    this._prepareOptions(options);
+    this.options = this._prepareOptions(options || {});
 
     /**
      * offset of viewport relative to document
      *
-     * @type {{ x?: number; y?: number }}
+     * @type {Point}
      */
-    this.offset = {};
+    this.offset = { x: 0, y: 0 };
 
     /**
-     * @type {{ x?: number; y?: number }}
+     * @type {Point}
      * @private
      */
-    this._prevViewportSize = {};
+    this._prevViewportSize = { x: 0, y: 0 };
 
     /**
      * Size of scrollable PhotoSwipe viewport
      *
-     * @type {{ x?: number; y?: number }}
+     * @type {Point}
      */
-    this.viewportSize = {};
+    this.viewportSize = { x: 0, y: 0 };
 
     /**
      * background (backdrop) opacity
-     *
-     * @type {number}
      */
     this.bgOpacity = 1;
+    this.currIndex = 0;
+    this.potentialIndex = 0;
+    this.isOpen = false;
+    this.isDestroying = false;
+    this.hasMouse = false;
 
-    /** @type {HTMLDivElement} */
+    /**
+     * @private
+     * @type {SlideData}
+     */
+    this._initialItemData = {};
+    /** @type {Bounds | null} */
+    this._initialThumbBounds = null;
+
+    /** @type {HTMLDivElement | undefined} */
     this.topBar = undefined;
+    /** @type {HTMLDivElement | undefined} */
+    this.element = undefined;
+    /** @type {HTMLDivElement | undefined} */
+    this.template = undefined;
+    /** @type {HTMLDivElement | undefined} */
+    this.container = undefined;
+    /** @type {HTMLElement | undefined} */
+    this.scrollWrap = undefined;
+    /** @type {Slide | undefined} */
+    this.currSlide = undefined;
 
     this.events = new DOMEvents();
-
-    /** @type {Animations} */
     this.animations = new Animations();
-
     this.mainScroll = new MainScroll(this);
     this.gestures = new Gestures(this);
     this.opener = new Opener(this);
     this.keyboard = new Keyboard(this);
     this.contentLoader = new ContentLoader(this);
+    // initialize scroll wheel handler to block the scroll
+    this.scrollWheel = new ScrollWheel(this);
+    this.ui = new UI(this);
   }
 
   init() {
@@ -5939,14 +6155,13 @@ class PhotoSwipe extends PhotoSwipeBase {
     if (this.options.mainClass) {
       rootClasses += ' ' + this.options.mainClass;
     }
-    this.element.className += ' ' + rootClasses;
+    if (this.element) {
+      this.element.className += ' ' + rootClasses;
+    }
 
     this.currIndex = this.options.index || 0;
     this.potentialIndex = this.currIndex;
     this.dispatch('firstUpdate'); // starting index can be modified here
-
-    // initialize scroll wheel handler to block the scroll
-    this.scrollWheel = new ScrollWheel(this);
 
     // sanitize index
     if (Number.isNaN(this.currIndex)
@@ -5977,12 +6192,17 @@ class PhotoSwipe extends PhotoSwipeBase {
     this.dispatch('initialLayout');
 
     this.on('openingAnimationEnd', () => {
-      this.mainScroll.itemHolders[0].el.style.display = 'block';
-      this.mainScroll.itemHolders[2].el.style.display = 'block';
+      const { itemHolders } = this.mainScroll;
 
       // Add content to the previous and next slide
-      this.setContent(this.mainScroll.itemHolders[0], this.currIndex - 1);
-      this.setContent(this.mainScroll.itemHolders[2], this.currIndex + 1);
+      if (itemHolders[0]) {
+        itemHolders[0].el.style.display = 'block';
+        this.setContent(itemHolders[0], this.currIndex - 1);
+      }
+      if (itemHolders[2]) {
+        itemHolders[2].el.style.display = 'block';
+        this.setContent(itemHolders[2], this.currIndex + 1);
+      }
 
       this.appendHeavy();
 
@@ -5994,14 +6214,14 @@ class PhotoSwipe extends PhotoSwipeBase {
     });
 
     // set content for center slide (first time)
-    this.setContent(this.mainScroll.itemHolders[1], this.currIndex);
+    if (this.mainScroll.itemHolders[1]) {
+      this.setContent(this.mainScroll.itemHolders[1], this.currIndex);
+    }
     this.dispatch('change');
 
     this.opener.open();
 
     this.dispatch('afterInit');
-
-    return true;
   }
 
   /**
@@ -6009,6 +6229,7 @@ class PhotoSwipe extends PhotoSwipeBase {
    * (for example, -1 will return the last slide)
    *
    * @param {number} index
+   * @returns {number}
    */
   getLoopedIndex(index) {
     const numSlides = this.getNumItems();
@@ -6023,16 +6244,12 @@ class PhotoSwipe extends PhotoSwipeBase {
       }
     }
 
-    index = clamp(index, 0, numSlides - 1);
-
-    return index;
+    return clamp(index, 0, numSlides - 1);
   }
 
   appendHeavy() {
     this.mainScroll.itemHolders.forEach((itemHolder) => {
-      if (itemHolder.slide) {
-        itemHolder.slide.appendHeavy();
-      }
+      itemHolder.slide?.appendHeavy();
     });
   }
 
@@ -6066,14 +6283,14 @@ class PhotoSwipe extends PhotoSwipeBase {
    * @param {Parameters<Slide['zoomTo']>} args
    */
   zoomTo(...args) {
-    this.currSlide.zoomTo(...args);
+    this.currSlide?.zoomTo(...args);
   }
 
   /**
    * @see slide/slide.js toggleZoom
    */
   toggleZoom() {
-    this.currSlide.toggleZoom();
+    this.currSlide?.toggleZoom();
   }
 
   /**
@@ -6109,17 +6326,17 @@ class PhotoSwipe extends PhotoSwipeBase {
 
     this.dispatch('destroy');
 
-    this.listeners = null;
+    this._listeners = {};
 
-    this.scrollWrap.ontouchmove = null;
-    this.scrollWrap.ontouchend = null;
+    if (this.scrollWrap) {
+      this.scrollWrap.ontouchmove = null;
+      this.scrollWrap.ontouchend = null;
+    }
 
-    this.element.remove();
+    this.element?.remove();
 
     this.mainScroll.itemHolders.forEach((itemHolder) => {
-      if (itemHolder.slide) {
-        itemHolder.slide.destroy();
-      }
+      itemHolder.slide?.destroy();
     });
 
     this.contentLoader.destroy();
@@ -6134,7 +6351,7 @@ class PhotoSwipe extends PhotoSwipeBase {
   refreshSlideContent(slideIndex) {
     this.contentLoader.removeByIndex(slideIndex);
     this.mainScroll.itemHolders.forEach((itemHolder, i) => {
-      let potentialHolderIndex = this.currSlide.index - 1 + i;
+      let potentialHolderIndex = (this.currSlide?.index ?? 0) - 1 + i;
       if (this.canLoop()) {
         potentialHolderIndex = this.getLoopedIndex(potentialHolderIndex);
       }
@@ -6144,9 +6361,8 @@ class PhotoSwipe extends PhotoSwipeBase {
 
         // activate the new slide if it's current
         if (i === 1) {
-          /** @type {Slide} */
           this.currSlide = itemHolder.slide;
-          itemHolder.slide.setIsActive(true);
+          itemHolder.slide?.setIsActive(true);
         }
       }
     });
@@ -6160,7 +6376,7 @@ class PhotoSwipe extends PhotoSwipeBase {
    *
    * @param {ItemHolder} holder mainScroll.itemHolders array item
    * @param {number} index Slide index
-   * @param {boolean=} force If content should be set even if index wasn't changed
+   * @param {boolean} [force] If content should be set even if index wasn't changed
    */
   setContent(holder, index, force) {
     if (this.canLoop()) {
@@ -6176,7 +6392,7 @@ class PhotoSwipe extends PhotoSwipeBase {
 
       // destroy previous slide
       holder.slide.destroy();
-      holder.slide = null;
+      holder.slide = undefined;
     }
 
     // exit if no loop and index is out of bounds
@@ -6195,6 +6411,7 @@ class PhotoSwipe extends PhotoSwipeBase {
     holder.slide.append(holder.el);
   }
 
+  /** @returns {Point} */
   getViewportCenterPoint() {
     return {
       x: this.viewportSize.x / 2,
@@ -6206,7 +6423,7 @@ class PhotoSwipe extends PhotoSwipeBase {
    * Update size of all elements.
    * Executed on init and on page resize.
    *
-   * @param {boolean=} force Update size even if size of viewport was not changed.
+   * @param {boolean} [force] Update size even if size of viewport was not changed.
    */
   updateSize(force) {
     // let item;
@@ -6230,11 +6447,11 @@ class PhotoSwipe extends PhotoSwipeBase {
 
     //this._prevViewportSize.x = newWidth;
     //this._prevViewportSize.y = newHeight;
-    equalizePoints(this._prevViewportSize, newViewportSize);
+    this._prevViewportSize = equalizePoints(this._prevViewportSize, newViewportSize);
 
     this.dispatch('beforeResize');
 
-    equalizePoints(this.viewportSize, this._prevViewportSize);
+    this.viewportSize = equalizePoints(this.viewportSize, this._prevViewportSize);
 
     this._updatePageScrollOffset();
 
@@ -6256,7 +6473,9 @@ class PhotoSwipe extends PhotoSwipeBase {
    */
   applyBgOpacity(opacity) {
     this.bgOpacity = Math.max(opacity, 0);
-    this.bg.style.opacity = String(this.bgOpacity * this.options.bgOpacity);
+    if (this.bg) {
+      this.bg.style.opacity = String(this.bgOpacity * this.options.bgOpacity);
+    }
   }
 
   /**
@@ -6265,7 +6484,7 @@ class PhotoSwipe extends PhotoSwipeBase {
   mouseDetected() {
     if (!this.hasMouse) {
       this.hasMouse = true;
-      this.element.classList.add('pswp--has_mouse');
+      this.element?.classList.add('pswp--has_mouse');
     }
   }
 
@@ -6318,7 +6537,7 @@ class PhotoSwipe extends PhotoSwipeBase {
    */
   _createMainStructure() {
     // root DOM element of PhotoSwipe (.pswp)
-    this.element = createElement('pswp');
+    this.element = createElement('pswp', 'div');
     this.element.setAttribute('tabindex', '-1');
     this.element.setAttribute('role', 'dialog');
 
@@ -6327,9 +6546,9 @@ class PhotoSwipe extends PhotoSwipeBase {
 
     // Background is added as a separate element,
     // as animating opacity is faster than animating rgba()
-    this.bg = createElement('pswp__bg', false, this.element);
+    this.bg = createElement('pswp__bg', 'div', this.element);
     this.scrollWrap = createElement('pswp__scroll-wrap', 'section', this.element);
-    this.container = createElement('pswp__container', false, this.scrollWrap);
+    this.container = createElement('pswp__container', 'div', this.scrollWrap);
 
     // aria pattern: carousel
     this.scrollWrap.setAttribute('aria-roledescription', 'carousel');
@@ -6338,7 +6557,6 @@ class PhotoSwipe extends PhotoSwipeBase {
 
     this.mainScroll.appendHolders();
 
-    this.ui = new UI(this);
     this.ui.init();
 
     // append to DOM
@@ -6351,6 +6569,8 @@ class PhotoSwipe extends PhotoSwipeBase {
    *   {x:,y:,w:}
    *
    * Height is optional (calculated based on the large image)
+   *
+   * @returns {Bounds | null}
    */
   getThumbBounds() {
     return getThumbBounds(
@@ -6361,28 +6581,11 @@ class PhotoSwipe extends PhotoSwipeBase {
   }
 
   /**
-   * If the PhotoSwipe can have continious loop
+   * If the PhotoSwipe can have continuous loop
    * @returns Boolean
    */
   canLoop() {
     return (this.options.loop && this.getNumItems() > 2);
-  }
-
-  /**
-   * @param {PhotoSwipeOptions} options
-   * @private
-   */
-  _prepareOptions(options) {
-    if (window.matchMedia('(prefers-reduced-motion), (update: slow)').matches) {
-      options.showHideAnimationType = 'none';
-      options.zoomAnimationDuration = 0;
-    }
-
-    /** @type {PhotoSwipeOptions}*/
-    this.options = {
-      ...defaultOptions,
-      ...options
-    };
   }
 }
 
