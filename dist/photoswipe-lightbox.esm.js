@@ -122,7 +122,7 @@ function isSafari() {
 
 /** @typedef {import('../lightbox/lightbox.js').default} PhotoSwipeLightbox */
 /** @typedef {import('../photoswipe.js').default} PhotoSwipe */
-/** @typedef {import('../photoswipe.js').PreparedPhotoSwipeOptions} PreparedPhotoSwipeOptions */
+/** @typedef {import('../photoswipe.js').PhotoSwipeOptions} PhotoSwipeOptions */
 /** @typedef {import('../photoswipe.js').DataSource} DataSource */
 /** @typedef {import('../ui/ui-element.js').UIElementData} UIElementData */
 /** @typedef {import('../slide/content.js').default} ContentDefault */
@@ -241,7 +241,7 @@ function isSafari() {
  * @prop {undefined} initialZoomOut
  * @prop {undefined} initialZoomInEnd
  * @prop {undefined} initialZoomOutEnd
- * @prop {{ dataSource: DataSource, numItems: number }} numItems
+ * @prop {{ dataSource: DataSource | undefined, numItems: number }} numItems
  * @prop {{ itemData: SlideData; index: number }} itemData
  * @prop {{ index: number, itemData: SlideData, instance: PhotoSwipe }} thumbBounds
  */
@@ -249,7 +249,7 @@ function isSafari() {
 /**
  * @typedef {Object} PhotoSwipeFiltersMap https://photoswipe.com/filters/
  *
- * @prop {(numItems: number, dataSource: DataSource) => number} numItems
+ * @prop {(numItems: number, dataSource: DataSource | undefined) => number} numItems
  * Modify the total amount of slides. Example on Data sources page.
  * https://photoswipe.com/filters/#numitems
  *
@@ -294,11 +294,11 @@ function isSafari() {
  * Modify a UI element that's being created.
  * https://photoswipe.com/filters/#uielement
  *
- * @prop {(thumbnail: HTMLElement, itemData: SlideData, index: number) => HTMLElement} thumbEl
+ * @prop {(thumbnail: HTMLElement | null | undefined, itemData: SlideData, index: number) => HTMLElement} thumbEl
  * Modify the thubmnail element from which opening zoom animation starts or ends.
  * https://photoswipe.com/filters/#thumbel
  *
- * @prop {(thumbBounds: Bounds, itemData: SlideData, index: number) => Bounds} thumbBounds
+ * @prop {(thumbBounds: Bounds | undefined, itemData: SlideData, index: number) => Bounds} thumbBounds
  * Modify the thubmnail bounds from which opening zoom animation starts or ends.
  * https://photoswipe.com/filters/#thumbbounds
  *
@@ -320,35 +320,6 @@ function isSafari() {
  * @template {keyof PhotoSwipeEventsMap} T
  * @typedef {(event: AugmentedEvent<T>) => void} EventCallback
  */
-
-/** @type {PreparedPhotoSwipeOptions} */
-const defaultOptions = {
-  allowPanToNext: true,
-  spacing: 0.1,
-  loop: true,
-  pinchToClose: true,
-  closeOnVerticalDrag: true,
-  hideAnimationDuration: 333,
-  showAnimationDuration: 333,
-  zoomAnimationDuration: 333,
-  escKey: true,
-  arrowKeys: true,
-  returnFocus: true,
-  maxWidthToAnimate: 4000,
-  clickToCloseNonZoomable: true,
-  imageClickAction: 'zoom-or-close',
-  bgClickAction: 'close',
-  tapAction: 'toggle-controls',
-  doubleTapAction: 'zoom',
-  indexIndicatorSep: ' / ',
-  preloaderDelay: 2000,
-  bgOpacity: 0.8,
-
-  index: 0,
-  errorMsg: 'The image cannot be loaded',
-  preload: [1, 2],
-  easing: 'cubic-bezier(.4,0,.22,1)'
-};
 
 /**
  * Base PhotoSwipe event object
@@ -392,8 +363,8 @@ class Eventable {
     /** @type {PhotoSwipe | undefined} */
     this.pswp = undefined;
 
-    /** @type {PreparedPhotoSwipeOptions} */
-    this.options = defaultOptions;
+    /** @type {PhotoSwipeOptions | undefined} */
+    this.options = undefined;
   }
 
   /**
@@ -923,7 +894,7 @@ class Content {
   displayError() {
     if (this.slide) {
       let errorMsgEl = createElement('pswp__error-msg', 'div');
-      errorMsgEl.innerText = this.instance.options.errorMsg;
+      errorMsgEl.innerText = this.instance.options?.errorMsg ?? '';
       errorMsgEl = /** @type {HTMLDivElement} */ (this.instance.applyFilters(
         'contentErrorElement',
         errorMsgEl,
@@ -1344,23 +1315,30 @@ class ZoomLevel {
  */
 function lazyLoadData(itemData, instance, index) {
   const content = instance.createContentFromData(itemData, index);
+  /** @type {ZoomLevel | undefined} */
+  let zoomLevel;
 
   const { options } = instance;
 
   // We need to know dimensions of the image to preload it,
   // as it might use srcset, and we need to define sizes
-  const zoomLevel = new ZoomLevel(options, itemData, -1);
-  if (instance.pswp) {
-    const viewportSize = instance.pswp.viewportSize || getViewportSize(options, instance.pswp);
-    const panAreaSize = getPanAreaSize(options, viewportSize, itemData, index);
-    zoomLevel.update(content.width, content.height, panAreaSize);
+  if (options) {
+    zoomLevel = new ZoomLevel(options, itemData, -1);
+    if (instance.pswp) {
+      const viewportSize = instance.pswp.viewportSize || getViewportSize(options, instance.pswp);
+      const panAreaSize = getPanAreaSize(options, viewportSize, itemData, index);
+      zoomLevel.update(content.width, content.height, panAreaSize);
+    }
   }
 
   content.lazyLoad();
-  content.setDisplayedSize(
-    Math.ceil(content.width * zoomLevel.initial),
-    Math.ceil(content.height * zoomLevel.initial)
-  );
+
+  if (zoomLevel) {
+    content.setDisplayedSize(
+      Math.ceil(content.width * zoomLevel.initial),
+      Math.ceil(content.height * zoomLevel.initial)
+    );
+  }
 
   return content;
 }
@@ -1388,8 +1366,6 @@ function lazyLoadSlide(index, instance) {
 }
 
 /** @typedef {import("../photoswipe.js").default} PhotoSwipe */
-/** @typedef {import("../photoswipe.js").PhotoSwipeOptions} PhotoSwipeOptions */
-/** @typedef {import("../photoswipe.js").PreparedPhotoSwipeOptions} PreparedPhotoSwipeOptions */
 /** @typedef {import("../slide/slide.js").SlideData} SlideData */
 
 /**
@@ -1404,14 +1380,12 @@ class PhotoSwipeBase extends Eventable {
    */
   getNumItems() {
     let numItems = 0;
-    let { dataSource } = this.options;
-    if (!dataSource) {
-      dataSource = [];
-    }
-    if ('length' in dataSource) {
+    const dataSource = this.options?.dataSource;
+
+    if (dataSource && 'length' in dataSource) {
       // may be an array or just object with length property
       numItems = dataSource.length;
-    } else if ('gallery' in dataSource) {
+    } else if (dataSource && 'gallery' in dataSource) {
       // query DOM elements
       if (!dataSource.items) {
         dataSource.items = this._getGalleryDOMElements(dataSource.gallery);
@@ -1450,7 +1424,7 @@ class PhotoSwipeBase extends Eventable {
    * @returns {SlideData}
    */
   getItemData(index) {
-    const { dataSource } = this.options;
+    const dataSource = this.options?.dataSource;
     /** @type {SlideData | HTMLElement} */
     let dataSourceItem = {};
     if (Array.isArray(dataSource)) {
@@ -1493,7 +1467,7 @@ class PhotoSwipeBase extends Eventable {
    * @returns {HTMLElement[]}
    */
   _getGalleryDOMElements(galleryElement) {
-    if (this.options.children || this.options.childSelector) {
+    if (this.options?.children || this.options?.childSelector) {
       return getElementsFromOption(
         this.options.children,
         this.options.childSelector,
@@ -1569,24 +1543,6 @@ class PhotoSwipeBase extends Eventable {
   lazyLoadData(itemData, index) {
     return lazyLoadData(itemData, this, index);
   }
-
-  /**
-   * @protected
-   * @param {PhotoSwipeOptions} options
-   * @returns {PreparedPhotoSwipeOptions}
-   */
-  _prepareOptions(options) {
-    if (window.matchMedia('(prefers-reduced-motion), (update: slow)').matches) {
-      options.showHideAnimationType = 'none';
-      options.zoomAnimationDuration = 0;
-    }
-
-    /** @type {PreparedPhotoSwipeOptions} */
-    return {
-      ...defaultOptions,
-      ...options
-    };
-  }
 }
 
 /**
@@ -1628,7 +1584,8 @@ class PhotoSwipeLightbox extends PhotoSwipeBase {
    */
   constructor(options) {
     super();
-    this.options = this._prepareOptions(options || {});
+    /** @type {PhotoSwipeOptions} */
+    this.options = options || {};
     this._uid = 0;
     this.shouldOpen = false;
     /**
